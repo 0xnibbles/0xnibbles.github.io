@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>Posts on Nibbles&#39; Sharing Depot</title>
+    <title>Posts on Sharing Depot</title>
     <link>https://0xnibbles.github.io/posts/</link>
-    <description>Recent content in Posts on Nibbles&#39; Sharing Depot</description>
+    <description>Recent content in Posts on Sharing Depot</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Mon, 26 Dec 2022 13:45:33 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>SLAE-32 Assignment 1 - Shell Bind TCP</title>
+      <title>SLAE32 Assignment 1 - Shell Bind TCP</title>
       <link>https://0xnibbles.github.io/posts/slae_32_assignment_1/</link>
       <pubDate>Mon, 26 Dec 2022 13:45:33 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae_32_assignment_1/</guid>
-      <description>This post starts the first mission to my SLAE-32 journey.</description>
+      <description>This post introduces the first mission to my SLAE-32 journey.
+Introduction The main goal for the first SLAE-32 assignment is to develop a shellcode for bind TCP shell with the following requirements:
+The shellcode should be null-free; With the ability for the port to be easily configurable. In other words, the connection port should be easy to set up for the user. Bind TCP shell? What is this? Generally, a bind TCP shell or bind shell is created when a listening port is configured to redirect the input, output, and errors of an executable (mostly /bin/sh or /bin/bash) to an incoming connection.</description>
     </item>
     
   </channel>
