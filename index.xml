@@ -6,16 +6,28 @@
     <description>Recent content on nibbles</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 26 Dec 2022 13:45:33 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 28 Dec 2022 01:59:06 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>SLAE32 Assignment 1 - Shell Bind TCP</title>
+      <title>SLAE32 Assignment 2 - TCP Reverse Shellcode</title>
+      <link>https://0xnibbles.github.io/posts/slae_32_assignment_2/</link>
+      <pubDate>Wed, 28 Dec 2022 01:59:06 +0000</pubDate>
+      
+      <guid>https://0xnibbles.github.io/posts/slae_32_assignment_2/</guid>
+      <description>This post introduces the second mission to my SLAE-32 journey.
+I spent a lot of time researching how to set up sockets or syscalls and taking notes which helped a lot to do this assigment. I won&amp;rsquo;t be as much detailed this time but guess what?
+The best part is that we can reuse the majority of the bind shellcode to create a reverse shellcode!
+Introduction The second assignment for the SLAE32 is similar to the previous post one but in this case we need to develop a reverse TCP shellcode.</description>
+    </item>
+    
+    <item>
+      <title>SLAE32 Assignment 1 - TCP Bind Shellcode</title>
       <link>https://0xnibbles.github.io/posts/slae_32_assignment_1/</link>
       <pubDate>Mon, 26 Dec 2022 13:45:33 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae_32_assignment_1/</guid>
       <description>This post introduces the first mission to my SLAE-32 journey.
-Introduction The main goal for the first SLAE-32 assignment is to develop a shellcode for bind TCP shell with the following requirements:
-The shellcode should be null-free; With the ability for the port to be easily configurable. In other words, the connection port should be easy to set up for the user. Bind TCP shell? What is this? Generally, a bind TCP shell or bind shell is created when a listening port is configured to redirect the input, output, and errors of an executable (mostly /bin/sh or /bin/bash) to an incoming connection.</description>
+Introduction The main goal for the first SLAE32 assignment is to develop a shellcode for bind TCP shell with the following requirements:
+Binds to a port; Executing a shell on incoming connection; The shellcode should be null-free; With the ability for the port to be easily configurable. In other words, the connection port should be easy to set up for the user.</description>
     </item>
     
     
