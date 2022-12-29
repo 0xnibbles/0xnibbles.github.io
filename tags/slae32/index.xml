@@ -6,7 +6,20 @@
     <description>Recent content in slae32 on nibbles</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 28 Dec 2022 16:39:09 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/tags/slae32/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 29 Dec 2022 10:58:18 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/tags/slae32/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>SLAE32 Assignment 5 - Msfvenom Shellcode Analysis</title>
+      <link>https://0xnibbles.github.io/posts/slae_32_assignment_5/</link>
+      <pubDate>Thu, 29 Dec 2022 10:58:18 +0000</pubDate>
+      
+      <guid>https://0xnibbles.github.io/posts/slae_32_assignment_5/</guid>
+      <description>This post introduces the 5th mission to my SLAE32 journey.
+A cool task to see how a widely used tool by the offensive security community produces shellcode and compare it with my own developed ones. New tricks and new cool learned.
+Introduction The SLAE32 5th assignment purpose is to select 3 msfvenom payloads and document my own analysis of them.
+For this task I selected the following payloads:
+linux/x86/shell_reverse_tcp linux/x86/exec linux/x86/chmod Shellcode 1 - linux/x86/shell_reverse_tcp I chose this one to compare the msfvenom shellcode to the code of my first assignment.</description>
+    </item>
+    
     <item>
       <title>SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)</title>
       <link>https://0xnibbles.github.io/posts/slae_32_assignment_4/</link>
