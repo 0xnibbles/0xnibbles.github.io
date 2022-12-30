@@ -6,7 +6,18 @@
     <description>Recent content in slae32 on nibbles</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 29 Dec 2022 10:58:18 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/tags/slae32/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 29 Dec 2022 15:02:57 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/tags/slae32/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>SLAE32 Assignment 6 - Polymorphic Shellcode</title>
+      <link>https://0xnibbles.github.io/posts/slae_32_assignment_6/</link>
+      <pubDate>Thu, 29 Dec 2022 15:02:57 +0000</pubDate>
+      
+      <guid>https://0xnibbles.github.io/posts/slae_32_assignment_6/</guid>
+      <description>This post introduces the 6th mission to my SLAE32 journey.
+If the previous assignment was cool, this one was even cooler because I could apply in the Msfvenom analysis assignment to develop polymorphic versions of existing shellcodes.
+There are some existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience.</description>
+    </item>
+    
     <item>
       <title>SLAE32 Assignment 5 - Msfvenom Shellcode Analysis</title>
       <link>https://0xnibbles.github.io/posts/slae_32_assignment_5/</link>
