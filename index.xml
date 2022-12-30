@@ -6,7 +6,20 @@
     <description>Recent content on nibbles</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 29 Dec 2022 15:02:57 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 30 Dec 2022 17:02:17 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>SLAE32 Assignment 7 - Custom Crypter</title>
+      <link>https://0xnibbles.github.io/posts/slae_32_assignment_7/</link>
+      <pubDate>Fri, 30 Dec 2022 17:02:17 +0000</pubDate>
+      
+      <guid>https://0xnibbles.github.io/posts/slae_32_assignment_7/</guid>
+      <description>This post introduces the7 th and last mission to my SLAE32 journey.
+A different task as decided to work with python3 and the majority of the work was dealing with convertion types between encrypting and decrypting the shellcode.
+Introduction The SLAE32 7th assignment purpose is to create a custom crypter having as reference the one shown in the crypter lesson..
+For this task there are no special requirements:
+Can use any existing encryption schema Can use any programming language I decided to to have a simpler approach to this task and not goign as much detail as previous assignments.</description>
+    </item>
+    
     <item>
       <title>SLAE32 Assignment 6 - Polymorphic Shellcode</title>
       <link>https://0xnibbles.github.io/posts/slae_32_assignment_6/</link>
