@@ -278,6 +278,8 @@ The best part is that we can reuse the majority of the bind shellcode to create 
 <h3 id="what-is-a-reverse-shell">What is a Reverse Shell?<a hidden class="anchor" aria-hidden="true" href="#what-is-a-reverse-shell">#</a></h3>
 <p>A reverse shell instead of waiting for connections it connects back to a remote machine which is waiting for a connection of the target machine.</p>
 <p>The input and output are redirect to the reverse shell socket so the remote machine can interact with the target machine remotely.</p>
+<p><img loading="lazy" src="/slae32/2/reverseshell.png#center" alt="Reverse Shell"  title="Reverse Shell"  />
+</p>
 <p>A TCP reverse shell is a common technique to bypass firewall restrictions and have access to systems that are unreachable from public networks.</p>
 <h2 id="basics-first">Basics First<a hidden class="anchor" aria-hidden="true" href="#basics-first">#</a></h2>
 <p>Before putting our hands-on on developing the shellcode, we should be familiar with the fundamental principles of how to create a proper reverse shell. This way, we will better understand how the <em>internals</em> work and where to debug if an error occurs.</p>
