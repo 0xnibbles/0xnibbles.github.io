@@ -105,7 +105,7 @@ There is a lof of overlap information with my post regarding the SLAE32 - Custom
     "slae64"
   ],
   "articleBody": " This post introduces my 4th mission to my SLAE64 journey.\nIntroduction The forth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. AS ou may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes).\nThere is a lof of overlap information with my post regarding the SLAE32 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder). I advice you to take look at if haven’t done already. There are some important concepts and ideas to understand what and why the shellcode is doing.\nFlipRotation Algorithm Overview The algorithm logic is the same as the one described in the FlipRotation Algorithm. My approach here was to port the 32 to 64 bit version so, I won’t go into details in this post.\nEncoder Similar to the 32 bit version but converted to output 64 bit assembly. Please see FlipRotation Encoder for more details.\nEncoder Output ╭─edu@debian ~/Desktop/slae_x86_64/assignments/4-Insertion-Encoder-Shellcode ‹main●› ╰─$ python3 flipRotation_Encoder.py _______________________________________________________________ ",
-  "wordCount" : "746",
+  "wordCount" : "749",
   "inLanguage": "en",
   "datePublished": "2023-01-01T17:27:17Z",
   "dateModified": "2023-01-01T17:27:17Z",
@@ -430,7 +430,7 @@ A shellcode encoder can be used for different purposes mainly make it harder to 
 </span></span><span style="display:flex;"><span>$ 
 </span></span></code></pre></div><p>We get a shell!!!</p>
 <hr>
-<p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: <a href="http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/">http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/</a></p>
+<p>This blog post has been created for completing the requirements of the x86_64 Assembly Language and Shellcoding on Linux (SLAE64): <a href="https://www.pentesteracademy.com/course?id=7">https://www.pentesteracademy.com/course?id=7</a></p>
 <p><code>Student ID: PA-31319</code></p>
 <p>All the source code files are available on GitHub at <a href="https://github.com/0xnibbles/slae_x86_64">https://github.com/0xnibbles/slae_x86_64</a></p>
 <hr>

@@ -111,7 +111,7 @@ Can use any existing encryption schema Can use any programming language I decide
     "slae32"
   ],
   "articleBody": " This post introduces the 7th and last mission to my SLAE32 journey.\nA different task as decided to work with python3 and the majority of the work was dealing with convertion types between encrypting and decrypting the shellcode.\nIntroduction The SLAE32 7th assignment purpose is to create a custom crypter having as reference the one shown in the crypter lesson..\nFor this task there are no special requirements:\nCan use any existing encryption schema Can use any programming language I decided to to have a simpler approach to this task and not going as much detail as previous assignments. They were hard and felt like having cryptography in the assembly world I should make things more complex than they need to be.\nCrypter For the encryption scheme I used AES in CTR mode. I used the script made for the custom encoder /decoder assignment as a reference.\nFor the shellcode I used the execve stack shellcode\n\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50\\x89\\xe2\\x53\\x89\\xe1\\xb0\\x0b\\xcd\\x80 Let’s see the crypter script.\n#!/usr/bin/python3 # AES CTR-mode shellcode crypter import argparse import secrets import sys import string import pyaes import binascii import os secretsGenerator = secrets.SystemRandom() c_style_shellcode = (b\"\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50\\x89\\xe2\\x53\\x89\\xe1\\xb0\\x0b\\xcd\\x80\") # bin/sh shellcode = \"\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50\\x89\\xe2\\x53\\x89\\xe1\\xb0\\x0b\\xcd\\x80\" encrypted_shellcode = \"\\xee\\x61\\x71\\x58\\x31\\xe4\\xa0\\x9b\\x61\\x40\\xef\\x89\\x34\\xa2\\xd7\\x0d\\x9f\\x76\\x71\\x5a\\x97\\x77\\xe4\\x7f\\xe0\" # encrypted shellcode iv =86225370279291231266238124133917033753321926857843067389263155507994576978348 def banner(): print(''' ________________________________________________________ ",
-  "wordCount" : "733",
+  "wordCount" : "736",
   "inLanguage": "en",
   "datePublished": "2022-12-30T17:02:17Z",
   "dateModified": "2022-12-30T17:02:17Z",
@@ -455,7 +455,12 @@ Can use any existing encryption schema Can use any programming language I decide
 <p>Improving this script is a future work to be performed. Working with different types in Python is a time consuming task and requires some hability to handle.</p>
 </blockquote>
 <hr>
-<p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: <a href="http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/">http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/</a></p>
+<p>This blog post has been created for completing the requirements
+of the SecurityTube Linux Assembly Expert certification:
+<a href="http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/">http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/</a></p>
+<ul>
+<li>Now at: <a href="https://www.pentesteracademy.com/course?id=3">https://www.pentesteracademy.com/course?id=3</a></li>
+</ul>
 <p><code>Student ID: PA-31319</code></p>
 <p>All the source code files are available on GitHub at <a href="https://github.com/0xnibbles/slae_x86">https://github.com/0xnibbles/slae_x86</a></p>
 <hr>
