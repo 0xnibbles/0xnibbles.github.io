@@ -910,7 +910,7 @@ End of assembler dump.
 0x555555558086 &lt;code+38&gt;:    push   0x3b
 0x555555558088 &lt;code+40&gt;:    pop    rax
 0x555555558089 &lt;code+41&gt;:    syscall 
-</code></pre><p>Here we have a <code>deja vú</code> of the <a href="/posts/slae_32_assignment_5/#shellcode-2---linuxx86exec">SLAE32 MSF Shellcode Analysis</a> assignment.</p>
+</code></pre><p>Here we have a <code>deja vú</code> of the <a href="/posts/slae32/slae_32_assignment_5/#shellcode-2---linuxx86exec">SLAE32 MSF Shellcode Analysis</a> assignment.</p>
 <p>The <code>call</code> is used to store the next instruction address onto the stack and redirect execution further in the &ldquo;middle&rdquo; of <code>0x0000555555558080 &lt;+32&gt;:    imul   eax,DWORD PTR [rax],0x5e545756</code> instruction</p>
 <pre tabindex="0"><code>gef➤  x/7i 0x555555558082
     0x555555558082 &lt;code+34&gt;:    push   rsi

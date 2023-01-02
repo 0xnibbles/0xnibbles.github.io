@@ -6,7 +6,19 @@
     <description>Recent content in Posts on nibbles</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 01 Jan 2023 22:40:23 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 02 Jan 2023 00:27:36 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Slae64 Assignment 7 - Custom Crypter</title>
+      <link>https://0xnibbles.github.io/posts/slae64/slae_64_assignment_7/</link>
+      <pubDate>Mon, 02 Jan 2023 00:27:36 +0000</pubDate>
+      
+      <guid>https://0xnibbles.github.io/posts/slae64/slae_64_assignment_7/</guid>
+      <description>This post introduces the 7th and last mission to my SLAE64 journey.
+As well as the SLAE32 - Custom Crypter decided to work with python3 and the majority of the work was dealing with convertion types between encrypting and decrypting the shellcode.
+Introduction The SLAE32 7th assignment purpose is to create a custom crypter having as reference the one shown in the crypter lesson..
+For this task there are no special requirements:</description>
+    </item>
+    
     <item>
       <title>Slae64 Assignment 6 - Polymorphic Shellcode</title>
       <link>https://0xnibbles.github.io/posts/slae64/slae_64_assignment_6/</link>
@@ -77,23 +89,23 @@ Binds to a port; User needs to provide a correct password Executing a shell on i
     
     <item>
       <title>SLAE32 Assignment 7 - Custom Crypter</title>
-      <link>https://0xnibbles.github.io/posts/slae_32_assignment_7/</link>
+      <link>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_7/</link>
       <pubDate>Fri, 30 Dec 2022 17:02:17 +0000</pubDate>
       
-      <guid>https://0xnibbles.github.io/posts/slae_32_assignment_7/</guid>
-      <description>This post introduces the7 th and last mission to my SLAE32 journey.
+      <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_7/</guid>
+      <description>This post introduces the 7th and last mission to my SLAE32 journey.
 A different task as decided to work with python3 and the majority of the work was dealing with convertion types between encrypting and decrypting the shellcode.
 Introduction The SLAE32 7th assignment purpose is to create a custom crypter having as reference the one shown in the crypter lesson..
 For this task there are no special requirements:
-Can use any existing encryption schema Can use any programming language I decided to to have a simpler approach to this task and not goign as much detail as previous assignments.</description>
+Can use any existing encryption schema Can use any programming language I decided to to have a simpler approach to this task and not going as much detail as previous assignments.</description>
     </item>
     
     <item>
       <title>SLAE32 Assignment 6 - Polymorphic Shellcode</title>
-      <link>https://0xnibbles.github.io/posts/slae_32_assignment_6/</link>
+      <link>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_6/</link>
       <pubDate>Thu, 29 Dec 2022 15:02:57 +0000</pubDate>
       
-      <guid>https://0xnibbles.github.io/posts/slae_32_assignment_6/</guid>
+      <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_6/</guid>
       <description>This post introduces the 6th mission to my SLAE32 journey.
 If the previous assignment was cool, this one was even cooler because I could apply in the Msfvenom analysis assignment to develop polymorphic versions of existing shellcodes.
 There are some existing tools, such as ADMutate, that will XOR-encrypt existing shellcode and attach loader code to it. This is definitely useful, but writing polymorphic shellcode without a tool is a much better learning experience.</description>
@@ -101,10 +113,10 @@ There are some existing tools, such as ADMutate, that will XOR-encrypt existing 
     
     <item>
       <title>SLAE32 Assignment 5 - Msfvenom Shellcode Analysis</title>
-      <link>https://0xnibbles.github.io/posts/slae_32_assignment_5/</link>
+      <link>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_5/</link>
       <pubDate>Thu, 29 Dec 2022 10:58:18 +0000</pubDate>
       
-      <guid>https://0xnibbles.github.io/posts/slae_32_assignment_5/</guid>
+      <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_5/</guid>
       <description>This post introduces the 5th mission to my SLAE32 journey.
 A cool task to see how a widely used tool by the offensive security community produces shellcode and compare it with my own developed ones. New tricks and new cool learned.
 Introduction The SLAE32 5th assignment purpose is to select 3 msfvenom payloads and document my own analysis of them.
@@ -114,10 +126,10 @@ linux/x86/shell_reverse_tcp linux/x86/exec linux/x86/chmod Shellcode 1 - linux/x
     
     <item>
       <title>SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)</title>
-      <link>https://0xnibbles.github.io/posts/slae_32_assignment_4/</link>
+      <link>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_4/</link>
       <pubDate>Wed, 28 Dec 2022 16:39:09 +0000</pubDate>
       
-      <guid>https://0xnibbles.github.io/posts/slae_32_assignment_4/</guid>
+      <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_4/</guid>
       <description>This post introduces the forth mission to my SLAE32 journey.
 A really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode
 Introduction The forth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. AS ou may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes).</description>
@@ -125,10 +137,10 @@ Introduction The forth assignment goal was to create my own custom encoder and d
     
     <item>
       <title>SLAE32 Assignment 3 - Egghunter Shellcode</title>
-      <link>https://0xnibbles.github.io/posts/slae_32_assignment_3/</link>
+      <link>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_3/</link>
       <pubDate>Wed, 28 Dec 2022 14:12:10 +0000</pubDate>
       
-      <guid>https://0xnibbles.github.io/posts/slae_32_assignment_3/</guid>
+      <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_3/</guid>
       <description>This post introduces the third mission to my SLAE32 journey.
 A cool challenge not covered during the course which made me to research and understand the concept and which scenarios its applicable.
 Introduction The third assignment for the SLAE32 purpose is to create an egghunter shellcode with the following requirements:
@@ -137,10 +149,10 @@ Create a working demo of the Egghunter; The shellcode should be null-free; With 
     
     <item>
       <title>SLAE32 Assignment 2 - TCP Reverse Shellcode</title>
-      <link>https://0xnibbles.github.io/posts/slae_32_assignment_2/</link>
+      <link>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_2/</link>
       <pubDate>Wed, 28 Dec 2022 01:59:06 +0000</pubDate>
       
-      <guid>https://0xnibbles.github.io/posts/slae_32_assignment_2/</guid>
+      <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_2/</guid>
       <description>This post introduces the second mission to my SLAE32 journey.
 I spent a lot of time researching how to set up sockets or syscalls and taking notes which helped a lot to do this assigment. I won&amp;rsquo;t be as much detailed this time but guess what?
 The best part is that we can reuse the majority of the bind shellcode to create a reverse shellcode!
@@ -149,10 +161,10 @@ Introduction The second assignment for the SLAE32 is similar to the previous pos
     
     <item>
       <title>SLAE32 Assignment 1 - TCP Bind Shellcode</title>
-      <link>https://0xnibbles.github.io/posts/slae_32_assignment_1/</link>
+      <link>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_1/</link>
       <pubDate>Mon, 26 Dec 2022 13:45:33 +0000</pubDate>
       
-      <guid>https://0xnibbles.github.io/posts/slae_32_assignment_1/</guid>
+      <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_1/</guid>
       <description>This post introduces the first mission to my SLAE32 journey.
 Introduction The main goal for the first SLAE32 assignment is to develop a shellcode for bind TCP shell with the following requirements:
 Binds to a port; Executing a shell on incoming connection; The shellcode should be null-free; With the ability for the port to be easily configurable. In other words, the connection port should be easy to set up for the user.</description>
