@@ -166,7 +166,7 @@ Introduction The second assignment for the SLAE32 is similar to the previous pos
       
       <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_1/</guid>
       <description>This post introduces the first mission to my SLAE32 journey.
-Introduction The main goal for the first SLAE32 assignment is to develop a shellcode for bind TCP shell with the following requirements:
+Introduction The main goal for the first SLAE32 assignment is to develop a bind TCP shellcode with the following requirements:
 Binds to a port; Executing a shell on incoming connection; The shellcode should be null-free; With the ability for the port to be easily configurable. In other words, the connection port should be easy to set up for the user.</description>
     </item>
     
