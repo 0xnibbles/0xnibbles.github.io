@@ -108,7 +108,7 @@ Can use any existing encryption schema Can use any programming language I decide
       
       <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_6/</guid>
       <description>This post introduces the 6th mission of my SLAE32 journey.
-If the previous assignment was incredible, this one was even cooler because I could apply it in the Msfvenom analysis assignment to develop polymorphic versions of existing shellcodes.
+If the previous assignment was incredible, this one was even cooler because I could apply what I learned in the Msfvenom analysis assignment to develop polymorphic versions of existing shellcodes.
 Some existing tools, such as ADMutate, will XOR-encrypt the existing shellcode and attach the loader code to it. This is useful, but writing polymorphic shellcodes without a tool is a much better learning experience.</description>
     </item>
     
