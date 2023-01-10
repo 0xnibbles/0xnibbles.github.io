@@ -8,7 +8,7 @@
     <language>en-us</language>
     <lastBuildDate>Mon, 02 Jan 2023 00:27:36 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/tags/slae64/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Slae64 Assignment 7 - Custom Crypter</title>
+      <title>SLAE64 Assignment 7 - Custom Crypter</title>
       <link>https://0xnibbles.github.io/posts/slae64/slae_64_assignment_7/</link>
       <pubDate>Mon, 02 Jan 2023 00:27:36 +0000</pubDate>
       
@@ -20,7 +20,7 @@ For this task there are no special requirements:</description>
     </item>
     
     <item>
-      <title>Slae64 Assignment 6 - Polymorphic Shellcode</title>
+      <title>SLAE64 Assignment 6 - Polymorphic Shellcode</title>
       <link>https://0xnibbles.github.io/posts/slae64/slae_64_assignment_6/</link>
       <pubDate>Sun, 01 Jan 2023 22:40:23 +0000</pubDate>
       
