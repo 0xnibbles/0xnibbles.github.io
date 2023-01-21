@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>slae64 on nibbles</title>
+    <title>slae64 on nibbles blog</title>
     <link>https://0xnibbles.github.io/tags/slae64/</link>
-    <description>Recent content in slae64 on nibbles</description>
+    <description>Recent content in slae64 on nibbles blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Mon, 02 Jan 2023 00:27:36 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/tags/slae64/index.xml" rel="self" type="application/rss+xml" />
