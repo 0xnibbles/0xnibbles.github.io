@@ -7,7 +7,7 @@
 <meta name="robots" content="index, follow">
 <title>SLAE32 Assignment 7 - Custom Crypter | nibbles</title>
 <meta name="keywords" content="slae32">
-<meta name="description" content="This post introduces the 7th and last mission of my SLAE32 journey.
+<meta name="description" content="SLAE32 This post introduces the 7th and last mission of my SLAE32 journey.
 A different task as I decided to work with python3, and most of the work dealt with conversion types between encrypting and decrypting the shellcode.
 Introduction The SLAE32 7th assignment&rsquo;s purpose is to create a custom crypter that references the one shown in the crypter lesson.
 For this task, there are no special requirements:
@@ -61,7 +61,7 @@ Can use any existing encryption schema Can use any programming language I decide
 
     </style>
 </noscript><meta property="og:title" content="SLAE32 Assignment 7 - Custom Crypter" />
-<meta property="og:description" content="This post introduces the 7th and last mission of my SLAE32 journey.
+<meta property="og:description" content="SLAE32 This post introduces the 7th and last mission of my SLAE32 journey.
 A different task as I decided to work with python3, and most of the work dealt with conversion types between encrypting and decrypting the shellcode.
 Introduction The SLAE32 7th assignment&rsquo;s purpose is to create a custom crypter that references the one shown in the crypter lesson.
 For this task, there are no special requirements:
@@ -73,7 +73,7 @@ Can use any existing encryption schema Can use any programming language I decide
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="SLAE32 Assignment 7 - Custom Crypter"/>
-<meta name="twitter:description" content="This post introduces the 7th and last mission of my SLAE32 journey.
+<meta name="twitter:description" content="SLAE32 This post introduces the 7th and last mission of my SLAE32 journey.
 A different task as I decided to work with python3, and most of the work dealt with conversion types between encrypting and decrypting the shellcode.
 Introduction The SLAE32 7th assignment&rsquo;s purpose is to create a custom crypter that references the one shown in the crypter lesson.
 For this task, there are no special requirements:
@@ -106,12 +106,12 @@ Can use any existing encryption schema Can use any programming language I decide
   "@type": "BlogPosting",
   "headline": "SLAE32 Assignment 7 - Custom Crypter",
   "name": "SLAE32 Assignment 7 - Custom Crypter",
-  "description": "This post introduces the 7th and last mission of my SLAE32 journey.\nA different task as I decided to work with python3, and most of the work dealt with conversion types between encrypting and decrypting the shellcode.\nIntroduction The SLAE32 7th assignment\u0026rsquo;s purpose is to create a custom crypter that references the one shown in the crypter lesson.\nFor this task, there are no special requirements:\nCan use any existing encryption schema Can use any programming language I decided to have a more straightforward approach to this task without going into as much detail as in previous assignments.",
+  "description": "SLAE32 This post introduces the 7th and last mission of my SLAE32 journey.\nA different task as I decided to work with python3, and most of the work dealt with conversion types between encrypting and decrypting the shellcode.\nIntroduction The SLAE32 7th assignment\u0026rsquo;s purpose is to create a custom crypter that references the one shown in the crypter lesson.\nFor this task, there are no special requirements:\nCan use any existing encryption schema Can use any programming language I decided to have a more straightforward approach to this task without going into as much detail as in previous assignments.",
   "keywords": [
     "slae32"
   ],
-  "articleBody": " This post introduces the 7th and last mission of my SLAE32 journey.\nA different task as I decided to work with python3, and most of the work dealt with conversion types between encrypting and decrypting the shellcode.\nIntroduction The SLAE32 7th assignment’s purpose is to create a custom crypter that references the one shown in the crypter lesson.\nFor this task, there are no special requirements:\nCan use any existing encryption schema Can use any programming language I decided to have a more straightforward approach to this task without going into as much detail as in previous assignments. They were hard, and I felt like having cryptography in the assembly world, I should make things more complex than needed.\nCrypter For the encryption scheme, the choice was AES in CTR mode. I used the script made for the custom encoder/decoder assignment as a reference.\nFor the shellcode I used the execve stack shellcode\n\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50\\x89\\xe2\\x53\\x89\\xe1\\xb0\\x0b\\xcd\\x80 Let’s see the crypter script.\n#!/usr/bin/python3 # AES CTR-mode shellcode crypter import argparse import secrets import sys import string import pyaes import binascii import os secretsGenerator = secrets.SystemRandom() c_style_shellcode = (b\"\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50\\x89\\xe2\\x53\\x89\\xe1\\xb0\\x0b\\xcd\\x80\") # bin/sh shellcode = \"\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50\\x89\\xe2\\x53\\x89\\xe1\\xb0\\x0b\\xcd\\x80\" encrypted_shellcode = \"\\xee\\x61\\x71\\x58\\x31\\xe4\\xa0\\x9b\\x61\\x40\\xef\\x89\\x34\\xa2\\xd7\\x0d\\x9f\\x76\\x71\\x5a\\x97\\x77\\xe4\\x7f\\xe0\" # encrypted shellcode iv =86225370279291231266238124133917033753321926857843067389263155507994576978348 def banner(): print(''' ________________________________________________________ ",
-  "wordCount" : "732",
+  "articleBody": " SLAE32 This post introduces the 7th and last mission of my SLAE32 journey.\nA different task as I decided to work with python3, and most of the work dealt with conversion types between encrypting and decrypting the shellcode.\nIntroduction The SLAE32 7th assignment’s purpose is to create a custom crypter that references the one shown in the crypter lesson.\nFor this task, there are no special requirements:\nCan use any existing encryption schema Can use any programming language I decided to have a more straightforward approach to this task without going into as much detail as in previous assignments. They were hard, and I felt like having cryptography in the assembly world, I should make things more complex than needed.\nCrypter For the encryption scheme, the choice was AES in CTR mode. I used the script made for the custom encoder/decoder assignment as a reference.\nFor the shellcode I used the execve stack shellcode\n\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50\\x89\\xe2\\x53\\x89\\xe1\\xb0\\x0b\\xcd\\x80 Let’s see the crypter script.\n#!/usr/bin/python3 # AES CTR-mode shellcode crypter import argparse import secrets import sys import string import pyaes import binascii import os secretsGenerator = secrets.SystemRandom() c_style_shellcode = (b\"\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50\\x89\\xe2\\x53\\x89\\xe1\\xb0\\x0b\\xcd\\x80\") # bin/sh shellcode = \"\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50\\x89\\xe2\\x53\\x89\\xe1\\xb0\\x0b\\xcd\\x80\" encrypted_shellcode = \"\\xee\\x61\\x71\\x58\\x31\\xe4\\xa0\\x9b\\x61\\x40\\xef\\x89\\x34\\xa2\\xd7\\x0d\\x9f\\x76\\x71\\x5a\\x97\\x77\\xe4\\x7f\\xe0\" # encrypted shellcode iv =86225370279291231266238124133917033753321926857843067389263155507994576978348 def banner(): print(''' ________________________________________________________ ",
+  "wordCount" : "733",
   "inLanguage": "en",
   "datePublished": "2022-12-30T17:02:17Z",
   "dateModified": "2022-12-30T17:02:17Z",
@@ -236,7 +236,11 @@ Can use any existing encryption schema Can use any programming language I decide
     </details>
 </div>
 
-  <div class="post-content"><p><img loading="lazy" src="/slae32/slae32.png#center" alt="SLAE32"  title="SLAE32"  />
+  <div class="post-content"><p>
+  <figure>
+    <img src="/slae32/slae32.png#center" alt="SLAE32">
+    <figcaption style='text-align: center'>SLAE32</figcaption>
+  </figure>
 </p>
 <p>This post introduces the 7th and last mission of my SLAE32 journey.</p>
 <p>A different task as I decided to work with python3, and most of the work dealt with conversion types between encrypting and decrypting the shellcode.</p>

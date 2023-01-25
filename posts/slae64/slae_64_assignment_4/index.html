@@ -7,7 +7,7 @@
 <meta name="robots" content="index, follow">
 <title>SLAE64 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder) | nibbles</title>
 <meta name="keywords" content="slae64">
-<meta name="description" content="This post introduces my 4th mission of my SLAE64 journey.
+<meta name="description" content="SLAE64 This post introduces my 4th mission of my SLAE64 journey.
 Introduction The fourth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes, making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).
 There is a lot of overlap information with my post regarding the SLAE32 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder).">
 <meta name="author" content="nibbles">
@@ -59,7 +59,7 @@ There is a lot of overlap information with my post regarding the SLAE32 - Custom
 
     </style>
 </noscript><meta property="og:title" content="SLAE64 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)" />
-<meta property="og:description" content="This post introduces my 4th mission of my SLAE64 journey.
+<meta property="og:description" content="SLAE64 This post introduces my 4th mission of my SLAE64 journey.
 Introduction The fourth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes, making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).
 There is a lot of overlap information with my post regarding the SLAE32 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)." />
 <meta property="og:type" content="article" />
@@ -69,7 +69,7 @@ There is a lot of overlap information with my post regarding the SLAE32 - Custom
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="SLAE64 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)"/>
-<meta name="twitter:description" content="This post introduces my 4th mission of my SLAE64 journey.
+<meta name="twitter:description" content="SLAE64 This post introduces my 4th mission of my SLAE64 journey.
 Introduction The fourth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes, making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).
 There is a lot of overlap information with my post regarding the SLAE32 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)."/>
 
@@ -100,12 +100,12 @@ There is a lot of overlap information with my post regarding the SLAE32 - Custom
   "@type": "BlogPosting",
   "headline": "SLAE64 Assignment 4 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder)",
   "name": "SLAE64 Assignment 4 - Custom Encoder\/Decoder Shellcode (FlipRotation Encoder\/Decoder)",
-  "description": "This post introduces my 4th mission of my SLAE64 journey.\nIntroduction The fourth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes, making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).\nThere is a lot of overlap information with my post regarding the SLAE32 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder).",
+  "description": "SLAE64 This post introduces my 4th mission of my SLAE64 journey.\nIntroduction The fourth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes, making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).\nThere is a lot of overlap information with my post regarding the SLAE32 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder).",
   "keywords": [
     "slae64"
   ],
-  "articleBody": " This post introduces my 4th mission of my SLAE64 journey.\nIntroduction The fourth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes, making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).\nThere is a lot of overlap information with my post regarding the SLAE32 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder). I advise you to look at it if you haven’t done it already. There are some essential concepts and ideas to understand what and why the shellcode is doing.\nFlipRotation Algorithm Overview The algorithm logic is the same as the one described in the FlipRotation Algorithm. My approach here was to port the 32 to 64-bit version so I won’t go into details in this post.\nEncoder Similar to the 32-bit version but converted to output 64-bit assembly. Please see FlipRotation Encoder for more details.\nEncoder Output ╭─edu@debian ~/Desktop/slae_x86_64/assignments/4-Insertion-Encoder-Shellcode ‹main●› ╰─$ python3 flipRotation_Encoder.py _______________________________________________________________ ",
-  "wordCount" : "768",
+  "articleBody": " SLAE64 This post introduces my 4th mission of my SLAE64 journey.\nIntroduction The fourth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes, making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).\nThere is a lot of overlap information with my post regarding the SLAE32 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder). I advise you to look at it if you haven’t done it already. There are some essential concepts and ideas to understand what and why the shellcode is doing.\nFlipRotation Algorithm Overview The algorithm logic is the same as the one described in the FlipRotation Algorithm. My approach here was to port the 32 to 64-bit version so I won’t go into details in this post.\nEncoder Similar to the 32-bit version but converted to output 64-bit assembly. Please see FlipRotation Encoder for more details.\nEncoder Output ╭─edu@debian ~/Desktop/slae_x86_64/assignments/4-Insertion-Encoder-Shellcode ‹main●› ╰─$ python3 flipRotation_Encoder.py _______________________________________________________________ ",
+  "wordCount" : "769",
   "inLanguage": "en",
   "datePublished": "2023-01-01T17:27:17Z",
   "dateModified": "2023-01-01T17:27:17Z",
@@ -253,7 +253,11 @@ There is a lot of overlap information with my post regarding the SLAE32 - Custom
     </details>
 </div>
 
-  <div class="post-content"><p><img loading="lazy" src="/slae64/slae64.png#center" alt="SLAE64"  title="SLAE64"  />
+  <div class="post-content"><p>
+  <figure>
+    <img src="/slae64/slae64.png#center" alt="SLAE64">
+    <figcaption style='text-align: center'>SLAE64</figcaption>
+  </figure>
 </p>
 <p>This post introduces my 4th mission of my SLAE64 journey.</p>
 <h2 id="introduction">Introduction<a hidden class="anchor" aria-hidden="true" href="#introduction">#</a></h2>

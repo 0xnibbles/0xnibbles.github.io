@@ -13,7 +13,7 @@
       <pubDate>Mon, 02 Jan 2023 00:27:36 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae64/slae_64_assignment_7/</guid>
-      <description>This post introduces the 7th and last mission of my SLAE64 journey.
+      <description>SLAE64 This post introduces the 7th and last mission of my SLAE64 journey.
 As well as the SLAE32 - Custom Crypter decided to work with python3 and the majority of the work was dealing with conversion types between encrypting and decrypting the shellcode.
 Introduction The SLAE32 7th assignment purpose is to create a custom crypter having as reference the one shown in the crypter lesson..
 For this task there are no special requirements:</description>
@@ -25,9 +25,9 @@ For this task there are no special requirements:</description>
       <pubDate>Sun, 01 Jan 2023 22:40:23 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae64/slae_64_assignment_6/</guid>
-      <description>This post introduces my 6th mission to my SLAE64 journey.
+      <description>SLAE64 This post introduces my 6th mission to my SLAE64 journey.
 Some existing tools, such as ADMutate, will XOR-encrypt existing shellcode and attach loader code. This is useful, but writing polymorphic shellcodes without a tool is a much better learning experience.
-There is a lot of overlap information with my post regarding the SLAE32 - Polymorphic Shellcode. I advise you to look at it if you haven’t done it already. There are some essential concepts and ideas to understand what and why the shellcode is doing.</description>
+There is a lot of overlap information with my post regarding the SLAE32 - Polymorphic Shellcode. I advise you to look at it if you haven’t done it already.</description>
     </item>
     
     <item>
@@ -36,7 +36,7 @@ There is a lot of overlap information with my post regarding the SLAE32 - Polymo
       <pubDate>Sun, 01 Jan 2023 17:58:44 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae64/slae_64_assignment_5/</guid>
-      <description>This post introduces my 5th mission of my SLAE64 journey.
+      <description>SLAE64 This post introduces my 5th mission of my SLAE64 journey.
 Introduction The SLAE64 5th assignment&amp;rsquo;s purpose is to select three msfvenom payloads, dissect them with gdb, and document my analysis.
 For this task, I selected the following payloads:
 linux/x86/shell_bind_tcp linux/x86/shell_reverse_tcp linux/x86/chmod Shellcode 1 - linux/x64/shell_bind_tcp The first step to do is to generate the shellcode using MSF. As usual, let’s check its arguments.
@@ -50,7 +50,7 @@ msfvenom -p linux/x64/shell_bind_tcp --list-options
       <pubDate>Sun, 01 Jan 2023 17:27:17 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae64/slae_64_assignment_4/</guid>
-      <description>This post introduces my 4th mission of my SLAE64 journey.
+      <description>SLAE64 This post introduces my 4th mission of my SLAE64 journey.
 Introduction The fourth assignment goal was to create my own custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh A shellcode encoder can be used for different purposes, making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).
 There is a lot of overlap information with my post regarding the SLAE32 - Custom Encoder/Decoder Shellcode (FlipRotation Encoder/Decoder).</description>
     </item>
@@ -61,9 +61,9 @@ There is a lot of overlap information with my post regarding the SLAE32 - Custom
       <pubDate>Sun, 01 Jan 2023 16:15:00 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae64/slae_64_assignment_3/</guid>
-      <description>This post introduces my 3rd mission of my SLAE64 journey.
+      <description>SLAE64 This post introduces my 3rd mission of my SLAE64 journey.
 Introduction The primary goal for the third SLAE64 assignment is to create an egghunter shellcode with the following requirements:
-Create a working demo of the Egghunter; The shellcode should be null-free; With the ability to be configurable for different payloads. Creating an Egghunter Shellcode There is a lot of overlap information with my post regarding the SLAE32 Egghunter Shellcode. I advise you to look at it if you haven’t done it already.</description>
+Create a working demo of the Egghunter; The shellcode should be null-free; With the ability to be configurable for different payloads. Creating an Egghunter Shellcode There is a lot of overlap information with my post regarding the SLAE32 Egghunter Shellcode.</description>
     </item>
     
     <item>
@@ -72,7 +72,7 @@ Create a working demo of the Egghunter; The shellcode should be null-free; With 
       <pubDate>Sun, 01 Jan 2023 02:30:49 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae64/slae_64_assignment_2/</guid>
-      <description>This post introduces my 2nd mission of my SLAE64 journey.
+      <description>SLAE64 This post introduces my 2nd mission of my SLAE64 journey.
 Introduction The main goal for the second SLAE64 assignment is to develop a reverse TCP shellcode with the following requirements:
 The reverse shell connects to the configured IP and port; The user needs to provide a correct password Executing a shell on incoming connection if the password is valid; The shellcode should be null-free; Creating a TCP Reverse Shellcode There is a lot of overlap information with my post regarding the SLAE32 TCP Reverse Shellcode.</description>
     </item>
@@ -83,7 +83,7 @@ The reverse shell connects to the configured IP and port; The user needs to prov
       <pubDate>Fri, 30 Dec 2022 18:54:45 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae64/slae_64_assignment_1/</guid>
-      <description>This post introduces the first mission of my SLAE64 journey.
+      <description>SLAE64 This post introduces the first mission of my SLAE64 journey.
 Introduction The main goal for the first SLAE64 assignment is to develop a shellcode for bind TCP shell with the following requirements:
 Binds to a port; Teh user needs to provide a correct password Executing a shell on incoming connection if thepassword is valid; The shellcode should be null-free; Past, present and Future The exercises of SLAE64 are identical to the ones of SLAE32, so for the 64-bit version, I will have a more simple approach.</description>
     </item>

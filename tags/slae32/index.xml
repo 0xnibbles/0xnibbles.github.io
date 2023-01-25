@@ -13,7 +13,7 @@
       <pubDate>Fri, 30 Dec 2022 17:02:17 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_7/</guid>
-      <description>This post introduces the 7th and last mission of my SLAE32 journey.
+      <description>SLAE32 This post introduces the 7th and last mission of my SLAE32 journey.
 A different task as I decided to work with python3, and most of the work dealt with conversion types between encrypting and decrypting the shellcode.
 Introduction The SLAE32 7th assignment&amp;rsquo;s purpose is to create a custom crypter that references the one shown in the crypter lesson.
 For this task, there are no special requirements:
@@ -26,7 +26,7 @@ Can use any existing encryption schema Can use any programming language I decide
       <pubDate>Thu, 29 Dec 2022 15:02:57 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_6/</guid>
-      <description>This post introduces the 6th mission of my SLAE32 journey.
+      <description>SLAE32 This post introduces the 6th mission of my SLAE32 journey.
 If the previous assignment was incredible, this one was even cooler because I could apply what I learned in the Msfvenom analysis assignment to develop polymorphic versions of existing shellcodes.
 Some existing tools, such as ADMutate, will XOR-encrypt the existing shellcode and attach the loader code to it. This is useful, but writing polymorphic shellcodes without a tool is a much better learning experience.</description>
     </item>
@@ -37,7 +37,7 @@ Some existing tools, such as ADMutate, will XOR-encrypt the existing shellcode a
       <pubDate>Thu, 29 Dec 2022 10:58:18 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_5/</guid>
-      <description>This post introduces the 5th mission of my SLAE32 journey.
+      <description>SLAE32 This post introduces the 5th mission of my SLAE32 journey.
 An excellent task to see how a widely used tool by the offensive security community produces shellcode and compare it with my developed ones. New tricks and new cool learned.
 Introduction The SLAE32 5th assignment purpose is to select 3 msfvenom payloads and document my own analysis of them.
 For this task I selected the following payloads:
@@ -50,7 +50,7 @@ linux/x86/shell_reverse_tcp linux/x86/exec linux/x86/chmod Shellcode 1 - linux/x
       <pubDate>Wed, 28 Dec 2022 16:39:09 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_4/</guid>
-      <description>This post introduces the forth mission of my SLAE32 journey.
+      <description>SLAE32 This post introduces the forth mission of my SLAE32 journey.
 A real handful and a challenging assignment. It was hard but worth it. Thus, I named my custom encoder/decoder shellcode as FlipRotation Shellcode
 Introduction The fourth assignment goal was to create my custom encoder and decoder of the execve stack shellcode. As you may know, the purpose is to execute /bin/sh.
 A shellcode encoder can be used for different purposes, mainly making it harder to detect by AV engines or simply avoiding bad characters (such as null bytes).</description>
@@ -62,10 +62,10 @@ A shellcode encoder can be used for different purposes, mainly making it harder 
       <pubDate>Wed, 28 Dec 2022 14:12:10 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_3/</guid>
-      <description>This post introduces the third mission of my SLAE32 journey.
+      <description>SLAE32 This post introduces the third mission of my SLAE32 journey.
 A fantastic challenge not covered during the course made me research and understand the concept and which scenarios it&amp;rsquo;s applicable.
 Introduction The third assignment for the SLAE32 purpose is to create an egghunter shellcode with the following requirements:
-Create a working demo of the Egghunter; The shellcode should be null-free; With the ability to be configurable for different payloads. Hunting eggs in memory?</description>
+Create a working demo of the Egghunter; The shellcode should be null-free; With the ability to be configurable for different payloads.</description>
     </item>
     
     <item>
@@ -74,7 +74,7 @@ Create a working demo of the Egghunter; The shellcode should be null-free; With 
       <pubDate>Wed, 28 Dec 2022 01:59:06 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_2/</guid>
-      <description>This post introduces the second mission of my SLAE32 journey.
+      <description>SLAE32 This post introduces the second mission of my SLAE32 journey.
 I spent a lot of time researching how to set up sockets or syscalls and taking notes which helped a lot to do this assignment.
 I won&amp;rsquo;t be as much detailed this time but guess what?
 The best part is that we can reuse most of the bind shellcode to create a reverse shellcode!
@@ -87,7 +87,7 @@ Introduction The second assignment for the SLAE32 is similar to the previous pos
       <pubDate>Mon, 26 Dec 2022 13:45:33 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/slae32/slae_32_assignment_1/</guid>
-      <description>This post introduces the first mission of my SLAE32 journey.
+      <description>SLAE32 This post introduces the first mission of my SLAE32 journey.
 Introduction The main goal for the first SLAE32 assignment is to develop a bind TCP shellcode with the following requirements:
 Binds to a port; Executing a shell on incoming connection; The shellcode should be null-free; With the ability for the port to be easily configurable. In other words, the connection port should be easy to set up for the user.</description>
     </item>

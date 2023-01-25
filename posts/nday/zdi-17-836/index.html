@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="index, follow">
 <title>ZDI-17-836 - dbman Opcode 10012 Use-After-Free Remote Code Execution (WIP) | nibbles</title>
-<meta name="keywords" content="nday, ZDI-17-836, UAF">
+<meta name="keywords" content="nday, ZDI-17-836, CVE-2017-12561, UAF">
 <meta name="description" content="Analysis is already performed but writeup is a working in progress
 Introduction The present document analyzes previous disclosed use-after-free in Hewlett Packard Enterprise Intelligent Management Center, a network management platform. The vulnerability was reported by Steven Seeley to the Zero Day Initiative (ZDI) disclosure program identified as CVE-2017-12561.
 The flaw allows to perform an unauthenticated remote attack and execute arbitrary code on vulnerable installations.HP fixed this vulnerability in October 2017, and all vulnerable instances should be updated to version HPE Intelligent Management Center (iMC) iMC Plat 7.">
@@ -102,10 +102,10 @@ The flaw allows to perform an unauthenticated remote attack and execute arbitrar
   "name": "ZDI-17-836 - dbman Opcode 10012 Use-After-Free Remote Code Execution (WIP)",
   "description": "Analysis is already performed but writeup is a working in progress\nIntroduction The present document analyzes previous disclosed use-after-free in Hewlett Packard Enterprise Intelligent Management Center, a network management platform. The vulnerability was reported by Steven Seeley to the Zero Day Initiative (ZDI) disclosure program identified as CVE-2017-12561.\nThe flaw allows to perform an unauthenticated remote attack and execute arbitrary code on vulnerable installations.HP fixed this vulnerability in October 2017, and all vulnerable instances should be updated to version HPE Intelligent Management Center (iMC) iMC Plat 7.",
   "keywords": [
-    "nday", "ZDI-17-836", "UAF"
+    "nday", "ZDI-17-836", "CVE-2017-12561", "UAF"
   ],
-  "articleBody": " Analysis is already performed but writeup is a working in progress\nIntroduction The present document analyzes previous disclosed use-after-free in Hewlett Packard Enterprise Intelligent Management Center, a network management platform. The vulnerability was reported by Steven Seeley to the Zero Day Initiative (ZDI) disclosure program identified as CVE-2017-12561.\nThe flaw allows to perform an unauthenticated remote attack and execute arbitrary code on vulnerable installations.HP fixed this vulnerability in October 2017, and all vulnerable instances should be updated to version HPE Intelligent Management Center (iMC) iMC Plat 7.3 E0504P4 or earlier to avoid being exposed according to the released security security bulletin.\nBackground Before going deep into the details, one must be aware of some technical topics, namely the target installation environment and an overview of ASN.1 BER Encoding as the packets to communicate with the server are in this format.\n",
-  "wordCount" : "140",
+  "articleBody": " Analysis is already performed but writeup is a working in progress\nIntroduction The present document analyzes previous disclosed use-after-free in Hewlett Packard Enterprise Intelligent Management Center, a network management platform. The vulnerability was reported by Steven Seeley to the Zero Day Initiative (ZDI) disclosure program identified as CVE-2017-12561.\nThe flaw allows to perform an unauthenticated remote attack and execute arbitrary code on vulnerable installations.HP fixed this vulnerability in October 2017, and all vulnerable instances should be updated to version HPE Intelligent Management Center (iMC) iMC Plat 7.3 E0504P4 or earlier to avoid being exposed according to the released security security bulletin.\nBackground Before going deep into the details, one must be aware of some technical topics, namely the target installation environment and an overview of ASN.1 BER Encoding as the packets to communicate with the server are in this format.\nInstallation Environment Following the exercise’s description, the target was installed in a Microsoft Windows Server 2008 R2 virtual machine. It was a good challenge because everything was in this OS is obsolete. After looking at the manual, I could configure the SQL Server and the sa account. The installation of the patched version was straightforward—the same for applying the vulnerable binary as it was simply by installing its components.\nThe first task is to know how the software works. After reading the documentation,installing both vulnerable and patched versions of HP iMC, and saving the respective DBman binaries for further analysis using IDA.\nAs seen with the netstat command, port 2810 regarding DBman is listening, and the service is ready to be analyzed.\nDBman Running in MS Windows Server 2088 R2 Quick Intro to ASN.1 BER Encoding ASN.1 (Abstract Syntax Notation One) is a notation for describing abstract types. A type is a set of values. A value of a given ASN.1 type is an element of the type’s set. ASN.1 has four types: simple types, which are “atomic” and have no components; structured types, which have components; tagged types, which are derived from other types; and other types, which include the CHOICE type and the ANY type.\nThe following table shows a list of ASN.1 types.\nType Tag number (decimal) Tag number (hexadecimal) INTEGER 2 02 BIT STRING 3 03 OCTET STRING 4 04 NULL 05 05 OBJECT IDENTIFIER 6 06 SEQUENCE and SEQUECE OF 16 10 SET and SET OF 17 11 PrintableString 19 13 T61String 20 14 UTCTime 23 17 BER Encoding BER (Basic Encoding Rules) is a subset of the ASN.1 standard. Its purpose is to allow to encode or represent values of each ASN.1 type as octets. BER uses a form of encoding commonly known as Tag-Length-Value.\nEach item is encoded as a tag, indicating what type it is, a length implying the object’s size, and a value containing the object’s actual contents.\nThere are various methods to encode values using BER. For more detail, see here.\nVulnerability Analysis Patch Diffing The patch code (E0504) for this vuln should not suffer a lot of changes since it is a close release from the vulnerable version (E0504P04).\nUsing IDA with the BinDiff plugin can give an idea of what functions were modified.\nBinDiff output in IDA The matched functions tab shows two modified functions, sub_4562C0 and sub_46CFD0.\nOn the one hand, checking sub_4562C0, nothing, at first sight, looks to be relevant.\nOn the other hand, sub_46CFD0 seems to be interesting as it appears inside a big switch-case where the condition is the opcode (10012) described in the advisory.\nOpcode 10012 Switch-case Code These are good hints to discover the flow and trigger the use-after-free vulnerability.\nsub_46CFD0 function Inspecting this function, nothing looks to be related to a use-after-free. The next step is analyzing the code related to the 10012 opcode.\nCode Analysis Firstly, the code checks the number of bytes received from the socket according to the documentation.\nRecv Size Buffer ACE recv API It reads 4 bytes of data and allocates a buffer of that size. So from this code, we can think the software expects a packet with the format: opcode+size_buffer+buffer_data\nTesting it with a simple python client it logs some odd errors because everything should have the same size.\n",
+  "wordCount" : "695",
   "inLanguage": "en",
   "datePublished": "2023-01-25T18:36:39Z",
   "dateModified": "2023-01-25T18:36:39Z",
@@ -210,7 +210,7 @@ The flaw allows to perform an unauthenticated remote attack and execute arbitrar
     <h1 class="post-title">
       ZDI-17-836 - dbman Opcode 10012 Use-After-Free Remote Code Execution (WIP)
     </h1>
-    <div class="post-meta"><span title='2023-01-25 18:36:39 +0000 UTC'>January 25, 2023</span>&nbsp;·&nbsp;1 min&nbsp;·&nbsp;nibbles
+    <div class="post-meta"><span title='2023-01-25 18:36:39 +0000 UTC'>January 25, 2023</span>&nbsp;·&nbsp;4 min&nbsp;·&nbsp;nibbles
 
 </div>
   </header> <div class="toc">
@@ -223,8 +223,25 @@ The flaw allows to perform an unauthenticated remote attack and execute arbitrar
                 <li>
                     <a href="#introduction" aria-label="Introduction">Introduction</a></li>
                 <li>
-                    <a href="#background" aria-label="Background">Background</a>
+                    <a href="#background" aria-label="Background">Background</a><ul>
+                        
+                <li>
+                    <a href="#installation-environment" aria-label="Installation Environment">Installation Environment</a></li>
+                <li>
+                    <a href="#quick-intro-to-asn1-ber-encoding" aria-label="Quick Intro to ASN.1 BER Encoding">Quick Intro to ASN.1 BER Encoding</a></li>
+                <li>
+                    <a href="#ber-encoding" aria-label="BER Encoding">BER Encoding</a></li></ul>
                 </li>
+                <li>
+                    <a href="#vulnerability-analysis" aria-label="Vulnerability Analysis">Vulnerability Analysis</a><ul>
+                        
+                <li>
+                    <a href="#patch-diffing" aria-label="Patch Diffing">Patch Diffing</a></li>
+                <li>
+                    <a href="#code-analysis" aria-label="Code Analysis">Code Analysis</a>
+                </li>
+            </ul>
+            </li>
             </ul>
         </div>
     </details>
@@ -238,6 +255,128 @@ The flaw allows to perform an unauthenticated remote attack and execute arbitrar
 <p>The flaw allows to perform an unauthenticated remote attack and execute arbitrary code on vulnerable installations.HP fixed this vulnerability in October 2017, and all vulnerable instances should be updated to version HPE Intelligent Management Center (iMC) iMC Plat 7.3 E0504P4 or earlier to avoid being exposed according to the released security security bulletin.</p>
 <h2 id="background">Background<a hidden class="anchor" aria-hidden="true" href="#background">#</a></h2>
 <p>Before going deep into the details, one must be aware of some technical topics, namely the target installation environment and an overview of ASN.1 BER Encoding as the packets to communicate with the server are in this format.</p>
+<h3 id="installation-environment">Installation Environment<a hidden class="anchor" aria-hidden="true" href="#installation-environment">#</a></h3>
+<p>Following the exercise’s description, the target was installed in a <code>Microsoft Windows Server 2008 R2</code> virtual machine. It was a good challenge because everything was
+in this OS is obsolete. After looking at the manual, I could configure the SQL Server and the sa account. The installation of the patched version was straightforward—the same for applying the vulnerable binary as it was simply by installing its components.</p>
+<p>The first task is to know how the software works. After reading the documentation,installing both vulnerable and patched versions of HP iMC, and saving the respective  DBman binaries for further analysis using IDA.</p>
+<p>As seen with the netstat command, port <code>2810</code> regarding DBman is listening, and the service is ready to be analyzed.</p>
+<p>
+  <figure>
+    <img src="/nday/zdi_17_836/installed_env.jpg#center" alt="DBman Running in MS Windows Server 2088 R2">
+    <figcaption style='text-align: center'>DBman Running in MS Windows Server 2088 R2</figcaption>
+  </figure>
+</p>
+<h3 id="quick-intro-to-asn1-ber-encoding">Quick Intro to ASN.1 BER Encoding<a hidden class="anchor" aria-hidden="true" href="#quick-intro-to-asn1-ber-encoding">#</a></h3>
+<p>ASN.1 (Abstract Syntax Notation One) is a notation for describing abstract types. A type is a set of values. A value of a given ASN.1 type is an element of the type’s set. ASN.1 has four types: simple types, which are &ldquo;atomic&rdquo; and have no components; structured types, which have components; tagged types, which are derived from other types; and other types, which include the CHOICE type and the ANY type.</p>
+<p>The following table shows a list of ASN.1 types.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Type</th>
+<th style="text-align:center">Tag number (decimal)</th>
+<th style="text-align:center">Tag number (hexadecimal)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">INTEGER</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">02</td>
+</tr>
+<tr>
+<td style="text-align:center">BIT STRING</td>
+<td style="text-align:center">3</td>
+<td style="text-align:center">03</td>
+</tr>
+<tr>
+<td style="text-align:center">OCTET STRING</td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">04</td>
+</tr>
+<tr>
+<td style="text-align:center">NULL</td>
+<td style="text-align:center">05</td>
+<td style="text-align:center">05</td>
+</tr>
+<tr>
+<td style="text-align:center">OBJECT IDENTIFIER</td>
+<td style="text-align:center">6</td>
+<td style="text-align:center">06</td>
+</tr>
+<tr>
+<td style="text-align:center">SEQUENCE and SEQUECE OF</td>
+<td style="text-align:center">16</td>
+<td style="text-align:center">10</td>
+</tr>
+<tr>
+<td style="text-align:center">SET and SET OF</td>
+<td style="text-align:center">17</td>
+<td style="text-align:center">11</td>
+</tr>
+<tr>
+<td style="text-align:center">PrintableString</td>
+<td style="text-align:center">19</td>
+<td style="text-align:center">13</td>
+</tr>
+<tr>
+<td style="text-align:center">T61String</td>
+<td style="text-align:center">20</td>
+<td style="text-align:center">14</td>
+</tr>
+<tr>
+<td style="text-align:center">UTCTime</td>
+<td style="text-align:center">23</td>
+<td style="text-align:center">17</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ber-encoding">BER Encoding<a hidden class="anchor" aria-hidden="true" href="#ber-encoding">#</a></h3>
+<p>BER (<em>Basic Encoding Rules</em>) is a subset of the ASN.1 standard. Its purpose is to allow to encode or represent values of each <code>ASN.1</code> type as octets. BER uses a form of encoding commonly known as <code>Tag-Length-Value</code>.<br>
+Each item is encoded as a tag, indicating what type it is, a length implying the object’s size, and a value containing the object’s actual contents.</p>
+<p>There are various methods to encode values using BER. For more detail, see <a href="https://luca.ntop.org/Teaching/Appunti/asn1.html">here</a>.</p>
+<h2 id="vulnerability-analysis">Vulnerability Analysis<a hidden class="anchor" aria-hidden="true" href="#vulnerability-analysis">#</a></h2>
+<h3 id="patch-diffing">Patch Diffing<a hidden class="anchor" aria-hidden="true" href="#patch-diffing">#</a></h3>
+<p>The patch code (<strong>E0504</strong>) for this vuln should not suffer a lot of changes since it is a close release from the vulnerable version (<strong>E0504P04</strong>).</p>
+<p>Using IDA with the BinDiff plugin can give an idea of what functions were modified.</p>
+<p>
+  <figure>
+    <img src="/nday/zdi_17_836/patch_diff/bindiff.png" alt="BinDiff output in IDA">
+    <figcaption style='text-align: center'>BinDiff output in IDA</figcaption>
+  </figure>
+</p>
+<p>The matched functions tab shows two modified functions, sub_4562C0 and <strong>sub_46CFD0</strong>.</p>
+<p>On the one hand, checking <strong>sub_4562C0</strong>, nothing, at first sight, looks to be relevant.<br>
+On the other hand, <strong>sub_46CFD0</strong> seems to be interesting as it appears inside a big switch-case where the condition is the opcode (<strong>10012</strong>) described in the advisory.</p>
+<p>
+  <figure>
+    <img src="/nday/zdi_17_836/patch_diff/case10012.png" alt="Opcode 10012 Switch-case Code">
+    <figcaption style='text-align: center'>Opcode 10012 Switch-case Code</figcaption>
+  </figure>
+</p>
+<p>These are good hints to discover the flow and trigger the use-after-free vulnerability.</p>
+<p>
+  <figure>
+    <img src="/nday/zdi_17_836/patch_diff/sub_46CFD0.png" alt="sub_46CFD0 function">
+    <figcaption style='text-align: center'>sub_46CFD0 function</figcaption>
+  </figure>
+</p>
+<p>Inspecting this function, nothing looks to be related to a use-after-free. The next step is analyzing the code related to the <code>10012 opcode</code>.</p>
+<h3 id="code-analysis">Code Analysis<a hidden class="anchor" aria-hidden="true" href="#code-analysis">#</a></h3>
+<p>Firstly, the code checks the number of bytes received from the socket according to the documentation.</p>
+<p>
+  <figure>
+    <img src="/nday/zdi_17_836/code_analysis/received_size_buffer.png" alt="Recv Size Buffer">
+    <figcaption style='text-align: center'>Recv Size Buffer</figcaption>
+  </figure>
+</p>
+<p>
+  <figure>
+    <img src="/nday/zdi_17_836/code_analysis//api_sock.png" alt="ACE recv API">
+    <figcaption style='text-align: center'>ACE recv API</figcaption>
+  </figure>
+</p>
+<p>It reads 4 bytes of data and allocates a buffer of that size. So from this code, we can think the software expects a packet with the format: <strong>opcode+size_buffer+buffer_data</strong></p>
+<p>Testing it with a simple python client it logs some odd errors because everything should have the same size.</p>
 
 
   </div>
@@ -246,6 +385,7 @@ The flaw allows to perform an unauthenticated remote attack and execute arbitrar
     <ul class="post-tags">
       <li><a href="https://0xnibbles.github.io/tags/nday/">nday</a></li>
       <li><a href="https://0xnibbles.github.io/tags/zdi-17-836/">ZDI-17-836</a></li>
+      <li><a href="https://0xnibbles.github.io/tags/cve-2017-12561/">CVE-2017-12561</a></li>
       <li><a href="https://0xnibbles.github.io/tags/uaf/">UAF</a></li>
     </ul>
 <nav class="paginav">
@@ -259,7 +399,7 @@ The flaw allows to perform an unauthenticated remote attack and execute arbitrar
 
 <div class="share-buttons">
     <a target="_blank" rel="noopener noreferrer" aria-label="share ZDI-17-836 - dbman Opcode 10012 Use-After-Free Remote Code Execution (WIP) on twitter"
-        href="https://twitter.com/intent/tweet/?text=ZDI-17-836%20-%20dbman%20Opcode%2010012%20Use-After-Free%20Remote%20Code%20Execution%20%28WIP%29&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fnday%2fzdi-17-836%2f&amp;hashtags=nday%2cZDI-17-836%2cUAF">
+        href="https://twitter.com/intent/tweet/?text=ZDI-17-836%20-%20dbman%20Opcode%2010012%20Use-After-Free%20Remote%20Code%20Execution%20%28WIP%29&amp;url=https%3a%2f%2f0xnibbles.github.io%2fposts%2fnday%2fzdi-17-836%2f&amp;hashtags=nday%2cZDI-17-836%2cCVE-2017-12561%2cUAF">
         <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
             <path
                 d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
