@@ -13,8 +13,7 @@
       <pubDate>Wed, 25 Jan 2023 18:36:39 +0000</pubDate>
       
       <guid>https://0xnibbles.github.io/posts/nday/zdi-17-836/</guid>
-      <description>Analysis is already performed but writeup is a working in progress
-Introduction The present document analyzes previous disclosed use-after-free in Hewlett Packard Enterprise Intelligent Management Center, a network management platform. The vulnerability was reported by Steven Seeley to the Zero Day Initiative (ZDI) disclosure program identified as CVE-2017-12561.
+      <description>Introduction The present document analyzes previous disclosed use-after-free in Hewlett Packard Enterprise Intelligent Management Center, a network management platform. The vulnerability was reported by Steven Seeley to the Zero Day Initiative (ZDI) disclosure program identified as CVE-2017-12561.
 The flaw allows to perform an unauthenticated remote attack and execute arbitrary code on vulnerable installations.HP fixed this vulnerability in October 2017, and all vulnerable instances should be updated to version HPE Intelligent Management Center (iMC) iMC Plat 7.</description>
     </item>
     

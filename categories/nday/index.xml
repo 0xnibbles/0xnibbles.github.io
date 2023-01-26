@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>ZDI-17-836 on nibbles</title>
-    <link>https://0xnibbles.github.io/tags/zdi-17-836/</link>
-    <description>Recent content in ZDI-17-836 on nibbles</description>
+    <title>nday on nibbles</title>
+    <link>https://0xnibbles.github.io/categories/nday/</link>
+    <description>Recent content in nday on nibbles</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 25 Jan 2023 18:36:39 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/tags/zdi-17-836/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 25 Jan 2023 18:36:39 +0000</lastBuildDate><atom:link href="https://0xnibbles.github.io/categories/nday/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>ZDI-17-836 - dbman Opcode 10012 Use-After-Free Remote Code Execution (WIP)</title>
       <link>https://0xnibbles.github.io/posts/nday/zdi-17-836/</link>
