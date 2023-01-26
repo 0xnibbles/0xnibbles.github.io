@@ -104,8 +104,8 @@ The flaw allows to perform an unauthenticated remote attack and execute arbitrar
   "keywords": [
     "nday", "ZDI-17-836", "CVE-2017-12561", "UAF"
   ],
-  "articleBody": " Analysis is already performed but writeup is a working in progress\nIntroduction The present document analyzes previous disclosed use-after-free in Hewlett Packard Enterprise Intelligent Management Center, a network management platform. The vulnerability was reported by Steven Seeley to the Zero Day Initiative (ZDI) disclosure program identified as CVE-2017-12561.\nThe flaw allows to perform an unauthenticated remote attack and execute arbitrary code on vulnerable installations.HP fixed this vulnerability in October 2017, and all vulnerable instances should be updated to version HPE Intelligent Management Center (iMC) iMC Plat 7.3 E0504P4 or earlier to avoid being exposed according to the released security security bulletin.\nBackground Before going deep into the details, one must be aware of some technical topics, namely the target installation environment and an overview of ASN.1 BER Encoding as the packets to communicate with the server are in this format.\nInstallation Environment Following the exercise’s description, the target was installed in a Microsoft Windows Server 2008 R2 virtual machine. It was a good challenge because everything was in this OS is obsolete. After looking at the manual, I could configure the SQL Server and the sa account. The installation of the patched version was straightforward—the same for applying the vulnerable binary as it was simply by installing its components.\nThe first task is to know how the software works. After reading the documentation,installing both vulnerable and patched versions of HP iMC, and saving the respective DBman binaries for further analysis using IDA.\nAs seen with the netstat command, port 2810 regarding DBman is listening, and the service is ready to be analyzed.\nDBman Running in MS Windows Server 2088 R2 Quick Intro to ASN.1 BER Encoding ASN.1 (Abstract Syntax Notation One) is a notation for describing abstract types. A type is a set of values. A value of a given ASN.1 type is an element of the type’s set. ASN.1 has four types: simple types, which are “atomic” and have no components; structured types, which have components; tagged types, which are derived from other types; and other types, which include the CHOICE type and the ANY type.\nThe following table shows a list of ASN.1 types.\nType Tag number (decimal) Tag number (hexadecimal) INTEGER 2 02 BIT STRING 3 03 OCTET STRING 4 04 NULL 05 05 OBJECT IDENTIFIER 6 06 SEQUENCE and SEQUECE OF 16 10 SET and SET OF 17 11 PrintableString 19 13 T61String 20 14 UTCTime 23 17 BER Encoding BER (Basic Encoding Rules) is a subset of the ASN.1 standard. Its purpose is to allow to encode or represent values of each ASN.1 type as octets. BER uses a form of encoding commonly known as Tag-Length-Value.\nEach item is encoded as a tag, indicating what type it is, a length implying the object’s size, and a value containing the object’s actual contents.\nThere are various methods to encode values using BER. For more detail, see here.\nVulnerability Analysis Patch Diffing The patch code (E0504) for this vuln should not suffer a lot of changes since it is a close release from the vulnerable version (E0504P04).\nUsing IDA with the BinDiff plugin can give an idea of what functions were modified.\nBinDiff output in IDA The matched functions tab shows two modified functions, sub_4562C0 and sub_46CFD0.\nOn the one hand, checking sub_4562C0, nothing, at first sight, looks to be relevant.\nOn the other hand, sub_46CFD0 seems to be interesting as it appears inside a big switch-case where the condition is the opcode (10012) described in the advisory.\nOpcode 10012 Switch-case Code These are good hints to discover the flow and trigger the use-after-free vulnerability.\nsub_46CFD0 function Inspecting this function, nothing looks to be related to a use-after-free. The next step is analyzing the code related to the 10012 opcode.\nCode Analysis Firstly, the code checks the number of bytes received from the socket according to the documentation.\nRecv Size Buffer ACE recv API It reads 4 bytes of data and allocates a buffer of that size. So from this code, we can think the software expects a packet with the format: opcode+size_buffer+buffer_data\nTesting it with a simple python client it logs some odd errors because everything should have the same size.\n",
-  "wordCount" : "695",
+  "articleBody": " Analysis is already performed but writeup is a working in progress\nIntroduction The present document analyzes previous disclosed use-after-free in Hewlett Packard Enterprise Intelligent Management Center, a network management platform. The vulnerability was reported by Steven Seeley to the Zero Day Initiative (ZDI) disclosure program identified as CVE-2017-12561.\nThe flaw allows to perform an unauthenticated remote attack and execute arbitrary code on vulnerable installations.HP fixed this vulnerability in October 2017, and all vulnerable instances should be updated to version HPE Intelligent Management Center (iMC) iMC Plat 7.3 E0504P4 or earlier to avoid being exposed according to the released security security bulletin.\nBackground Before going deep into the details, one must be aware of some technical topics, namely the target installation environment and an overview of ASN.1 BER Encoding as the packets to communicate with the server are in this format.\nInstallation Environment Following the exercise’s description, the target was installed in a Microsoft Windows Server 2008 R2 virtual machine. It was a good challenge because everything was in this OS is obsolete. After looking at the manual, I could configure the SQL Server and the sa account. The installation of the patched version was straightforward—the same for applying the vulnerable binary as it was simply by installing its components.\nThe first task is to know how the software works. After reading the documentation,installing both vulnerable and patched versions of HP iMC, and saving the respective DBman binaries for further analysis using IDA.\nAs seen with the netstat command, port 2810 regarding DBman is listening, and the service is ready to be analyzed.\nDBman Running in MS Windows Server 2088 R2 Quick Intro to ASN.1 BER Encoding ASN.1 (Abstract Syntax Notation One) is a notation for describing abstract types. A type is a set of values. A value of a given ASN.1 type is an element of the type’s set. ASN.1 has four types: simple types, which are “atomic” and have no components; structured types, which have components; tagged types, which are derived from other types; and other types, which include the CHOICE type and the ANY type.\nThe following table shows a list of ASN.1 types.\nType Tag number (decimal) Tag number (hexadecimal) INTEGER 2 02 BIT STRING 3 03 OCTET STRING 4 04 NULL 05 05 OBJECT IDENTIFIER 6 06 SEQUENCE and SEQUECE OF 16 10 SET and SET OF 17 11 PrintableString 19 13 T61String 20 14 UTCTime 23 17 BER Encoding BER (Basic Encoding Rules) is a subset of the ASN.1 standard. Its purpose is to allow to encode or represent values of each ASN.1 type as octets. BER uses a form of encoding commonly known as Tag-Length-Value.\nEach item is encoded as a tag, indicating what type it is, a length implying the object’s size, and a value containing the object’s actual contents.\nThere are various methods to encode values using BER. For more detail, see here.\nVulnerability Analysis Patch Diffing The patch code (E0504) for this vuln should not suffer a lot of changes since it is a close release from the vulnerable version (E0504P04).\nUsing IDA with the BinDiff plugin can give an idea of what functions were modified.\nBinDiff output in IDA The matched functions tab shows two modified functions, sub_4562C0 and sub_46CFD0.\nOn the one hand, checking sub_4562C0, nothing, at first sight, looks to be relevant.\nOn the other hand, sub_46CFD0 seems to be interesting as it appears inside a big switch-case where the condition is the opcode (10012) described in the advisory.\nOpcode 10012 Switch-case Code These are good hints to discover the flow and trigger the use-after-free vulnerability.\nsub_46CFD0 function Inspecting this function, nothing looks to be related to a use-after-free. The next step is analyzing the code related to the 10012 opcode.\nCode Analysis Firstly, the code checks the number of bytes received from the socket according to the documentation.\nRecv Size Buffer ACE recv API It reads 4 bytes of data and allocates a buffer of that size. So from this code, we can think the software expects a packet with the format: opcode+size_buffer+buffer_data\nTesting it with a simple python client it logs some odd errors because everything should have the same size.\n#!/usr/bin/python3 from pwn import * from struct import pack, unpack def main(): host = '192.168.1.133' port = 2810 # default port according to documentation conn = remote(host, port) #sends --\u003e opcode,size of buffer being allocated, buffer data payload = b'' payload += pack('\u003ei',10012) # opcode payload += pack('\u003ei',144) # size of buffer payload += pack('\u003ei',0x41*144) # buffer data conn.sendline(payload) main() With this script, I could unintentionally trigger an error that appeared to crash DBman.\nDBman crash log Why this failed?\nSomehow the if condition was true. Inside it is the string “dbman_decode_len failed” which was the one logged when the crash happened. So this function must somehow be trying to decode the ASN.1 object sent in the packet, which failed during the process.\ndbman_decode_len function prototype Checking the decompiled jar, there is no reference to this string. Analyzing the function looks like it is trying to check if the size from the data_buffer is right and tries to store the length in a variable if the check is acceptable.\nFor curiosity checked aLiuan814ucj variable reference. It is located in the data section, which seems to be a string already present at the compilation time.\naLiuan814ucj in data section Looking in the decompiled jar and found it being used as a key with DES symmetric algorithm.\naLiuan814ucj in deploy.jar So sub_454120 should be related to DES decryption using liuan814 as the key. Not sure if this is the case, but since the function is about decoding the ASN.1 object, it seems to be trying to decipher the data_buffer and check if everything goes well. \\\n",
+  "wordCount" : "959",
   "inLanguage": "en",
   "datePublished": "2023-01-25T18:36:39Z",
   "dateModified": "2023-01-25T18:36:39Z",
@@ -210,7 +210,7 @@ The flaw allows to perform an unauthenticated remote attack and execute arbitrar
     <h1 class="post-title">
       ZDI-17-836 - dbman Opcode 10012 Use-After-Free Remote Code Execution (WIP)
     </h1>
-    <div class="post-meta"><span title='2023-01-25 18:36:39 +0000 UTC'>January 25, 2023</span>&nbsp;·&nbsp;4 min&nbsp;·&nbsp;nibbles
+    <div class="post-meta"><span title='2023-01-25 18:36:39 +0000 UTC'>January 25, 2023</span>&nbsp;·&nbsp;5 min&nbsp;·&nbsp;nibbles
 
 </div>
   </header> <div class="toc">
@@ -371,12 +371,68 @@ On the other hand, <strong>sub_46CFD0</strong> seems to be interesting as it app
 </p>
 <p>
   <figure>
-    <img src="/nday/zdi_17_836/code_analysis//api_sock.png" alt="ACE recv API">
+    <img src="/nday/zdi_17_836/code_analysis/api_sock.png" alt="ACE recv API">
     <figcaption style='text-align: center'>ACE recv API</figcaption>
   </figure>
 </p>
 <p>It reads 4 bytes of data and allocates a buffer of that size. So from this code, we can think the software expects a packet with the format: <strong>opcode+size_buffer+buffer_data</strong></p>
 <p>Testing it with a simple python client it logs some odd errors because everything should have the same size.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e">#!/usr/bin/python3</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> pwn <span style="color:#f92672">import</span> <span style="color:#f92672">*</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> struct <span style="color:#f92672">import</span> pack, unpack
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    host <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;192.168.1.133&#39;</span>
+</span></span><span style="display:flex;"><span>    port <span style="color:#f92672">=</span> <span style="color:#ae81ff">2810</span> <span style="color:#75715e"># default port according to documentation</span>
+</span></span><span style="display:flex;"><span>    conn <span style="color:#f92672">=</span> remote(host, port)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">#sends --&gt; opcode,size of buffer being allocated, buffer data</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#39;&#39;</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">+=</span> pack(<span style="color:#e6db74">&#39;&gt;i&#39;</span>,<span style="color:#ae81ff">10012</span>) <span style="color:#75715e"># opcode</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">+=</span> pack(<span style="color:#e6db74">&#39;&gt;i&#39;</span>,<span style="color:#ae81ff">144</span>) <span style="color:#75715e"># size of buffer</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">+=</span> pack(<span style="color:#e6db74">&#39;&gt;i&#39;</span>,<span style="color:#ae81ff">0x41</span><span style="color:#f92672">*</span><span style="color:#ae81ff">144</span>) <span style="color:#75715e"># buffer data</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    conn<span style="color:#f92672">.</span>sendline(payload)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>main()
+</span></span></code></pre></div><p>With this script, I could unintentionally trigger an error that appeared to crash DBman.</p>
+<p>
+  <figure>
+    <img src="/nday/zdi_17_836/code_analysis/log_crash.png" alt="DBman crash log">
+    <figcaption style='text-align: center'>DBman crash log</figcaption>
+  </figure>
+</p>
+<blockquote>
+<p><strong>Why this failed?</strong></p>
+</blockquote>
+<p>Somehow the if condition was <strong>true</strong>. Inside it is the string <strong>&ldquo;dbman_decode_len failed&rdquo;</strong> which was the one logged when the crash happened. So this function must
+somehow be trying to decode the ASN.1 object sent in the packet, which failed during the process.</p>
+<p>
+  <figure>
+    <img src="/nday/zdi_17_836/code_analysis/if_dbman_decode_len.png" alt="dbman_decode_len function prototype">
+    <figcaption style='text-align: center'>dbman_decode_len function prototype</figcaption>
+  </figure>
+</p>
+<p>Checking the decompiled jar, there is no reference to this string. Analyzing the function looks like it is trying to check if the size from the <em>data_buffer</em> is right and tries to store the length in a variable if the check is acceptable.</p>
+<p>For curiosity checked <em>aLiuan814ucj</em> variable reference. It is located in the data section, which seems to be a string already present at the compilation time.</p>
+<p>
+  <figure>
+    <img src="/nday/zdi_17_836/code_analysis/des_key_data_section.png#center" alt="aLiuan814ucj in data section">
+    <figcaption style='text-align: center'>aLiuan814ucj in data section</figcaption>
+  </figure>
+</p>
+<p>Looking in the decompiled jar and found it being used as a key with <strong>DES symmetric algorithm</strong>.</p>
+<p>
+  <figure>
+    <img src="/nday/zdi_17_836/code_analysis/des_key_java.png#center" alt="aLiuan814ucj in deploy.jar">
+    <figcaption style='text-align: center'>aLiuan814ucj in deploy.jar</figcaption>
+  </figure>
+</p>
+<p>So <strong>sub_454120</strong> should be related to DES decryption using <em><strong>liuan814</strong></em> as the key. Not sure if this is the case, but since the function is about decoding the ASN.1 object, it seems to be trying to decipher the data_buffer and check if everything goes well. \</p>
 
 
   </div>
